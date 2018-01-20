@@ -110,4 +110,7 @@
     <java-symbol type="array" name="charging_speed_entries" />
     <java-symbol type="array" name="charging_speed_values" />
 
+    <!-- Defines the actions shown in advanced reboot submenu -->
+    <java-symbol type="array" name="config_restartActionsList" />
+
 </resources>
