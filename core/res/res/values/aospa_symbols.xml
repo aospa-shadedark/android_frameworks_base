@@ -102,4 +102,6 @@
     <!-- Whether to use Richtap vibration -->
     <java-symbol type="bool" name="config_usesRichtapVibration" />
 
+   <!-- Defines the actions shown in advanced reboot submenu -->
+   <java-symbol type="array" name="config_restartActionsList" />
 </resources>
