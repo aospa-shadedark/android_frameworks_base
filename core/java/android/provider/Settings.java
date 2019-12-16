@@ -6116,6 +6116,14 @@ public final class Settings {
 
 
         /**
+         * Whether to blink the rear camera flashlight for incoming calls.
+         * 0 = disabled, 1 = audible ringer, 2 = inaudible ringer, 3 = silent, 4 = always.
+         * @hide
+         */
+        @Readable
+        public static final String FLASHLIGHT_ON_CALL = "flashlight_on_call";
+
+        /**
          * Whether lockscreen media artwork is shown as the lockscreen background.
          * @hide
          */

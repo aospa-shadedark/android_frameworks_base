@@ -2986,6 +2986,9 @@ class SettingsProtoDumpUtil {
                 Settings.System.NOTIFICATION_SOUND_VIB_SCREEN_ON,
                 SystemSettingsProto.Notification.SOUND_VIB_SCREEN_ON);
         dumpSetting(s, p,
+                Settings.System.FLASHLIGHT_ON_CALL,
+                SystemSettingsProto.Notification.FLASHLIGHT_ON_CALL);
+        dumpSetting(s, p,
                 Settings.System.SCREEN_FLASH_NOTIFICATION_COLOR,
                 SystemSettingsProto.Notification.SCREEN_FLASH_NOTIFICATION_COLOR_GLOBAL);
         // Settings.System.NOTIFICATIONS_USE_RING_VOLUME intentionally excluded since it's deprecated.

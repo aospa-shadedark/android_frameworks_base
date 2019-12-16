@@ -130,6 +130,7 @@ message SystemSettingsProto {
         optional SettingProto screen_flash_notification = 6 [ (android.privacy).dest = DEST_AUTOMATIC ];
         optional SettingProto screen_flash_notification_color_global = 7 [ (android.privacy).dest = DEST_AUTOMATIC ];
         optional SettingProto sound_vib_screen_on = 8 [ (android.privacy).dest = DEST_AUTOMATIC ];
+        optional SettingProto flashlight_on_call = 9 [ (android.privacy).dest = DEST_AUTOMATIC ];
     }
     optional Notification notification = 17;
 
