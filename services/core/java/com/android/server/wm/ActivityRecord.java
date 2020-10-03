@@ -10027,4 +10027,8 @@ public final class ActivityRecord extends WindowToken {
                     mTaskDescription, mCreateTime);
         }
     }
+
+    public boolean shouldForceCutoutFullscreen() {
+        return mAtmService.shouldForceCutoutFullscreen(packageName);
+    }
 }
