@@ -201,6 +201,7 @@ public final class NotificationAttentionHelper {
     @GuardedBy("mLock")
     private boolean mScreenOn = true;
     private boolean mUserPresent = false;
+    private volatile boolean mSoundVibScreenOn;
     @GuardedBy("mLock")
     private boolean mNotificationPulseEnabled;
     private final Uri mInCallNotificationUri;
@@ -358,6 +359,9 @@ public final class NotificationAttentionHelper {
         mContext.getContentResolver().registerContentObserver(
                 SettingsObserver.NOTIFICATION_LIGHT_PULSE_URI, false, mSettingsObserver,
                 UserHandle.USER_ALL);
+        mContext.getContentResolver().registerContentObserver(
+                SettingsObserver.NOTIFICATION_SOUND_VIB_SCREEN_ON_URI, false, mSettingsObserver,
+                UserHandle.USER_ALL);
 
         if (favoritesIncomingCallLights()) {
             mContext.getContentResolver()
@@ -383,6 +387,10 @@ public final class NotificationAttentionHelper {
     }
 
     private void loadUserSettings() {
+        mSoundVibScreenOn = Settings.System.getIntForUser(
+                mContext.getContentResolver(), Settings.System.NOTIFICATION_SOUND_VIB_SCREEN_ON,
+                0, UserHandle.USER_CURRENT) != 0;
+
         boolean pulseEnabled = Settings.System.getIntForUser(mContext.getContentResolver(),
                 Settings.System.NOTIFICATION_LIGHT_PULSE, 0, UserHandle.USER_CURRENT) != 0;
         synchronized (mLock) {
@@ -516,7 +524,8 @@ public final class NotificationAttentionHelper {
         }
 
         if (aboveThreshold && isNotificationForCurrentUser(record, signals)) {
-            if (mSystemReady && mAudioManager != null) {
+            boolean skipSound = mScreenOn && !mSoundVibScreenOn;
+            if (!skipSound && mSystemReady && mAudioManager != null) {
                 Uri soundUri = record.getSound();
                 hasValidSound = soundUri != null && !Uri.EMPTY.equals(soundUri);
                 VibrationEffect vibration = record.getVibration();
@@ -1876,6 +1885,8 @@ public final class NotificationAttentionHelper {
 
         private static final Uri NOTIFICATION_LIGHT_PULSE_URI = Settings.System.getUriFor(
                 Settings.System.NOTIFICATION_LIGHT_PULSE);
+        private static final Uri NOTIFICATION_SOUND_VIB_SCREEN_ON_URI = Settings.System.getUriFor(
+                Settings.System.NOTIFICATION_SOUND_VIB_SCREEN_ON);
         private static final Uri LIGHT_ANIMATION_FAVORITE_CALLS_ENABLED_URI =
                 Settings.Secure.getUriFor(Settings.Secure.LIGHT_ANIMATION_FAVORITE_CALLS_ENABLED);
         private static final Uri NOTIFICATION_COOLDOWN_ENABLED_URI = Settings.System.getUriFor(
@@ -1890,6 +1901,12 @@ public final class NotificationAttentionHelper {
 
         @Override
         public void onChange(boolean selfChange, Uri uri) {
+            if (NOTIFICATION_SOUND_VIB_SCREEN_ON_URI.equals(uri)) {
+                mSoundVibScreenOn = Settings.System.getIntForUser(
+                        mContext.getContentResolver(),
+                        Settings.System.NOTIFICATION_SOUND_VIB_SCREEN_ON, 0,
+                        UserHandle.USER_CURRENT) != 0;
+            }
             if (NOTIFICATION_LIGHT_PULSE_URI.equals(uri)) {
                 boolean pulseEnabled = Settings.System.getIntForUser(
                         mContext.getContentResolver(),
