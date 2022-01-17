@@ -14154,6 +14154,36 @@ public final class Settings {
         public static final String BERRY_BLACK_THEME = "berry_black_theme";
 
         /**
+         * Whether to show privacy indicators for microphone and camera.
+         * Default value should be from DeviceConfig.
+         *
+         * @hide
+         */
+        @Readable
+        public static final String MIC_CAMERA_PRIVACY_INDICATORS_ENABLED =
+                "mic_camera_privacy_indicators_enabled";
+
+        /**
+         * Whether to show privacy indicator for location.
+         * Default value should be from DeviceConfig.
+         *
+         * @hide
+         */
+        @Readable
+        public static final String LOCATION_PRIVACY_INDICATOR_ENABLED =
+                "location_privacy_indicator_enabled";
+
+        /**
+         * Whether to show privacy indicator for media projection.
+         * Default value should be from DeviceConfig.
+         *
+         * @hide
+         */
+        @Readable
+        public static final String ENABLE_PROJECTION_PRIVACY_INDICATOR =
+                "enable_projection_privacy_indicator";
+
+        /**
          * Control whether to hide ADB and Developer settings enable status.
          * @hide
          */

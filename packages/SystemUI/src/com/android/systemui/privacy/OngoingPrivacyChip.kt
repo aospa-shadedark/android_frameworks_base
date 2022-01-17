@@ -18,7 +18,6 @@ import android.content.Context
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.graphics.drawable.GradientDrawable
-import android.location.flags.Flags.locationIndicatorsEnabled
 import android.util.AttributeSet
 import android.view.ViewGroup
 import android.widget.ImageView
@@ -51,18 +50,11 @@ constructor(
         set(value) {
             field = value
             updateView(PrivacyChipBuilder(context, field))
-            if (locationIndicatorsEnabled()) {
-                updateResources()
-            }
+            updateResources()
         }
 
     private val locationOnly: Boolean
-        private get() =
-            if (locationIndicatorsEnabled()) {
-                PrivacyConfig.Companion.privacyItemsAreLocationOnly(privacyList)
-            } else {
-                false
-            }
+        private get() = PrivacyConfig.Companion.privacyItemsAreLocationOnly(privacyList)
 
     init {
         inflate(context, R.layout.ongoing_privacy_chip, this)
@@ -141,19 +133,15 @@ constructor(
         iconsContainer.setPaddingRelative(padding, 0, padding, 0)
         iconsContainer.minimumWidth =
             context.resources.getDimensionPixelSize(R.dimen.ongoing_appops_chip_min_width)
-        if (locationIndicatorsEnabled()) {
-            if (chipDrawable == null) {
-                chipDrawable =
-                    context.getDrawable(R.drawable.statusbar_privacy_chip_bg)?.mutate()
-                        as? GradientDrawable
-                iconsContainer.background = chipDrawable
-            }
-            chipDrawable?.let { drawable ->
-                val color = context.getColor(PrivacyConfig.Companion.getPrivacyColor(locationOnly))
-                drawable.setColor(color)
-            }
-        } else {
-            iconsContainer.background = context.getDrawable(R.drawable.statusbar_privacy_chip_bg)
+        if (chipDrawable == null) {
+            chipDrawable =
+                context.getDrawable(R.drawable.statusbar_privacy_chip_bg)?.mutate()
+                    as? GradientDrawable
+            iconsContainer.background = chipDrawable
+        }
+        chipDrawable?.let { drawable ->
+            val color = context.getColor(PrivacyConfig.Companion.getPrivacyColor(locationOnly))
+            drawable.setColor(color)
         }
     }
 

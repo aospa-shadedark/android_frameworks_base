@@ -16,7 +16,6 @@
 
 package com.android.systemui.privacy
 
-import android.location.flags.Flags.locationIndicatorsEnabled
 import com.android.internal.annotations.VisibleForTesting
 import com.android.systemui.Dumpable
 import com.android.systemui.appops.AppOpsController
@@ -189,7 +188,7 @@ constructor(
      */
     private fun processNewList(list: List<PrivacyItem>): List<PrivacyItem> {
         val allPrivacyItemsAreLocation =
-            locationIndicatorsEnabled() &&
+            locationAvailable &&
                 PrivacyConfig.Companion.privacyItemsAreLocationOnly((list + privacyList).distinct())
         val timeToHold =
             if (allPrivacyItemsAreLocation) {

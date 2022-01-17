@@ -62,6 +62,7 @@ import android.os.UserHandle;
 import android.os.UserManager;
 import android.permission.flags.Flags;
 import android.provider.DeviceConfig;
+import android.provider.Settings;
 import android.telephony.TelephonyManager;
 import android.util.ArrayMap;
 import android.util.ArraySet;
@@ -112,10 +113,20 @@ public class PermissionUsageHelper implements AppOpsManager.OnOpActiveChangedLis
     private static final long DEFAULT_RECENT_TIME_MS = 15000L;
     private static final long ADDITIONAL_RECENT_TIME_LOCATION_ONLY_MS = 5000L;
 
-    private static boolean shouldShowIndicators() {
-        return DeviceConfig.getBoolean(DeviceConfig.NAMESPACE_PRIVACY,
-                PROPERTY_CAMERA_MIC_ICONS_ENABLED, true)
-                || android.location.flags.Flags.locationIndicatorsEnabled();
+    private boolean shouldShowIndicators() {
+        return shouldShowCameraIndicator() || shouldShowLocationIndicator();
+    }
+
+    private boolean shouldShowCameraIndicator() {
+        return Settings.Secure.getIntForUser(mContext.getContentResolver(),
+                Settings.Secure.MIC_CAMERA_PRIVACY_INDICATORS_ENABLED, 1,
+                UserHandle.USER_CURRENT) == 1;
+    }
+
+    private boolean shouldShowLocationIndicator() {
+        return Settings.Secure.getIntForUser(mContext.getContentResolver(),
+                Settings.Secure.LOCATION_PRIVACY_INDICATOR_ENABLED, 1,
+                UserHandle.USER_CURRENT) == 1;
     }
 
     private static long getRecentThreshold(Long now) {
@@ -301,11 +312,14 @@ public class PermissionUsageHelper implements AppOpsManager.OnOpActiveChangedLis
             return usages;
         }
 
-        List<String> ops = new ArrayList<>(CAMERA_OPS);
-        if (includeMicrophoneUsage) {
-            ops.addAll(MIC_OPS);
+        List<String> ops = new ArrayList<>();
+        if (shouldShowCameraIndicator()) {
+            ops.addAll(CAMERA_OPS);
+            if (includeMicrophoneUsage) {
+                ops.addAll(MIC_OPS);
+            }
         }
-        if (android.location.flags.Flags.locationIndicatorsEnabled()) {
+        if (shouldShowLocationIndicator()) {
             ops.addAll(LOCATION_OPS);
         }
 
@@ -597,7 +611,7 @@ public class PermissionUsageHelper implements AppOpsManager.OnOpActiveChangedLis
 
                     String permGroupName = getGroupForOp(op);
                     boolean isLocationOp =
-                            android.location.flags.Flags.locationIndicatorsEnabled()
+                            shouldShowLocationIndicator()
                                     && LOCATION.equals(permGroupName);
                     long currentRunningThreshold =
                             runningThreshold

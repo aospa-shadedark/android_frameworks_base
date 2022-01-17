@@ -214,6 +214,7 @@ constructor(
     }
 
     fun onParentInvisible() {
+        setChipVisibility(false)
         chipVisibilityListener = null
         privacyChip.setOnClickListener(null)
     }
@@ -230,6 +231,7 @@ constructor(
         listening = false
         privacyItemController.removeCallback(picCallback)
         privacyChipLogged = false
+        setChipVisibility(false)
     }
 
     private fun setChipVisibility(visible: Boolean) {

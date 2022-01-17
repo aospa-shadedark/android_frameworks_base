@@ -16,20 +16,28 @@
 
 package com.android.systemui.privacy
 
-import android.location.flags.Flags.locationIndicatorsEnabled
+import android.database.ContentObserver
 import android.location.flags.Flags.locationIndicatorsOutline
+import android.net.Uri
+import android.os.Handler
+import android.os.UserHandle
 import android.provider.DeviceConfig
+import android.provider.Settings.Secure.ENABLE_PROJECTION_PRIVACY_INDICATOR
+import android.provider.Settings.Secure.LOCATION_PRIVACY_INDICATOR_ENABLED
+import android.provider.Settings.Secure.MIC_CAMERA_PRIVACY_INDICATORS_ENABLED
 import com.android.internal.annotations.VisibleForTesting
 import com.android.internal.annotations.WeaklyReferencedCallback
 import com.android.internal.config.sysui.SystemUiDeviceConfigFlags
 import com.android.systemui.Dumpable
 import com.android.systemui.dagger.SysUISingleton
+import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.dump.DumpManager
 import com.android.systemui.res.R
 import com.android.systemui.util.DeviceConfigProxy
 import com.android.systemui.util.asIndenting
 import com.android.systemui.util.concurrency.DelayableExecutor
+import com.android.systemui.util.settings.SecureSettings
 import com.android.systemui.util.withIncreasedIndent
 import java.io.PrintWriter
 import java.lang.ref.WeakReference
@@ -41,7 +49,9 @@ class PrivacyConfig
 constructor(
     @Main private val uiExecutor: DelayableExecutor,
     private val deviceConfigProxy: DeviceConfigProxy,
+    private val secureSettings: SecureSettings,
     dumpManager: DumpManager,
+    @Background bgHandler: Handler,
 ) : Dumpable {
 
     @VisibleForTesting
@@ -54,21 +64,21 @@ constructor(
         private const val DEFAULT_MEDIA_PROJECTION = true
 
         fun getPrivacyColor(locationOnly: Boolean): Int {
-            if (locationIndicatorsEnabled() && locationOnly) {
+            if (locationOnly) {
                 return R.color.privacy_chip_location_only_background
             }
             return R.color.privacy_chip_background
         }
 
         fun getPrivacyOutlineColor(locationOnly: Boolean): Int {
-            if (locationIndicatorsEnabled() && locationIndicatorsOutline() && locationOnly) {
+            if (locationIndicatorsOutline() && locationOnly) {
                 return R.color.privacy_chip_location_only_outline
             }
             return R.color.transparent
         }
 
         fun getPrivacyOutlineStroke(locationOnly: Boolean): Int {
-            if (locationIndicatorsEnabled() && locationIndicatorsOutline() && locationOnly) {
+            if (locationIndicatorsOutline() && locationOnly) {
                 return 1
             }
             return 0
@@ -85,7 +95,7 @@ constructor(
     var micCameraAvailable = isMicCameraEnabled()
         private set
 
-    var locationAvailable = locationIndicatorsEnabled()
+    var locationAvailable = isLocationEnabled()
         private set
 
     var mediaProjectionAvailable = isMediaProjectionEnabled()
@@ -96,23 +106,48 @@ constructor(
             if (DeviceConfig.NAMESPACE_PRIVACY == properties.namespace) {
                 // Running on the ui executor so can iterate on callbacks
                 if (properties.keyset.contains(MIC_CAMERA)) {
-                    micCameraAvailable = properties.getBoolean(MIC_CAMERA, DEFAULT_MIC_CAMERA)
+                    val isEnabled = isMicCameraEnabled()
+                    micCameraAvailable = isEnabled
                     callbacks.forEach { it.get()?.onFlagMicCameraChanged(micCameraAvailable) }
                 }
 
-                if (locationAvailable) {
-                    callbacks.forEach { it.get()?.onFlagLocationChanged(locationAvailable) }
-                }
-
                 if (properties.keyset.contains(MEDIA_PROJECTION)) {
-                    mediaProjectionAvailable =
-                        properties.getBoolean(MEDIA_PROJECTION, DEFAULT_MEDIA_PROJECTION)
+                    val isEnabled = isMediaProjectionEnabled()
+                    mediaProjectionAvailable = isEnabled
                     callbacks.forEach {
                         it.get()?.onFlagMediaProjectionChanged(mediaProjectionAvailable)
                     }
                 }
             }
         }
+
+    private val settingsObserver = object : ContentObserver(bgHandler) {
+        override fun onChange(selfChange: Boolean, uri: Uri?) {
+            when (uri?.lastPathSegment) {
+                MIC_CAMERA_PRIVACY_INDICATORS_ENABLED -> {
+                    val isEnabled = isMicCameraEnabled()
+                    uiExecutor.execute {
+                        micCameraAvailable = isEnabled
+                        callbacks.forEach { it.get()?.onFlagMicCameraChanged(micCameraAvailable) }
+                    }
+                }
+                LOCATION_PRIVACY_INDICATOR_ENABLED -> {
+                    val isEnabled = isLocationEnabled()
+                    uiExecutor.execute {
+                        locationAvailable = isEnabled
+                        callbacks.forEach { it.get()?.onFlagLocationChanged(locationAvailable) }
+                    }
+                }
+                ENABLE_PROJECTION_PRIVACY_INDICATOR -> {
+                    val isEnabled = isMediaProjectionEnabled()
+                    uiExecutor.execute {
+                        mediaProjectionAvailable = isEnabled
+                        callbacks.forEach { it.get()?.onFlagMediaProjectionChanged(mediaProjectionAvailable) }
+                    }
+                }
+            }
+        }
+    }
 
     init {
         dumpManager.registerNormalDumpable(TAG, this)
@@ -121,22 +156,58 @@ constructor(
             uiExecutor,
             devicePropertiesChangedListener,
         )
+        secureSettings.registerContentObserverForUserSync(
+            MIC_CAMERA_PRIVACY_INDICATORS_ENABLED,
+            false,
+            settingsObserver,
+            UserHandle.USER_ALL
+        )
+        secureSettings.registerContentObserverForUserSync(
+            LOCATION_PRIVACY_INDICATOR_ENABLED,
+            false,
+            settingsObserver,
+            UserHandle.USER_ALL
+        )
+        secureSettings.registerContentObserverForUserSync(
+            ENABLE_PROJECTION_PRIVACY_INDICATOR,
+            false,
+            settingsObserver,
+            UserHandle.USER_ALL
+        )
     }
 
     private fun isMicCameraEnabled(): Boolean {
-        return deviceConfigProxy.getBoolean(
+        val defaultValue = deviceConfigProxy.getBoolean(
             DeviceConfig.NAMESPACE_PRIVACY,
             MIC_CAMERA,
             DEFAULT_MIC_CAMERA,
         )
+        return secureSettings.getIntForUser(
+            MIC_CAMERA_PRIVACY_INDICATORS_ENABLED,
+            if (defaultValue) 1 else 0,
+            UserHandle.USER_CURRENT,
+        ) == 1
+    }
+
+    private fun isLocationEnabled(): Boolean {
+        return secureSettings.getIntForUser(
+            LOCATION_PRIVACY_INDICATOR_ENABLED,
+            1,
+            UserHandle.USER_CURRENT,
+        ) == 1
     }
 
     private fun isMediaProjectionEnabled(): Boolean {
-        return deviceConfigProxy.getBoolean(
+        val defaultValue = deviceConfigProxy.getBoolean(
             DeviceConfig.NAMESPACE_PRIVACY,
             MEDIA_PROJECTION,
             DEFAULT_MEDIA_PROJECTION,
         )
+        return secureSettings.getIntForUser(
+            ENABLE_PROJECTION_PRIVACY_INDICATOR,
+            if (defaultValue) 1 else 0,
+            UserHandle.USER_CURRENT,
+        ) == 1
     }
 
     fun addCallback(callback: Callback) {
