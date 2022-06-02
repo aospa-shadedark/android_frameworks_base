@@ -134,4 +134,7 @@
     <java-symbol type="string" name="app_lock_credential_continue" />
     <java-symbol type="string" name="app_lock_credential_set_done" />
     <java-symbol type="string" name="app_lock_credential_cleared" />
+
+    <!-- Lock gesture -->
+    <java-symbol type="string" name="gesture_locked_warning" />
 </resources>
