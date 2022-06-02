@@ -60,4 +60,7 @@
     <string name="app_lock_credential_set_done">App Lock credential set</string>
     <string name="app_lock_credential_cleared">App Lock credential removed</string>
 
+    <!-- Lock gesture -->
+    <string name="gesture_locked_warning">Swipe again to unlock gestures</string>
+
 </resources>
