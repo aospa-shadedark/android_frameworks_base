@@ -80,6 +80,7 @@ import com.android.systemui.flags.Flags;
 import com.android.systemui.plugins.ActivityStarter;
 import com.android.systemui.res.R;
 import com.android.systemui.statusbar.connectivity.AccessPointController;
+import com.android.systemui.statusbar.policy.HotspotController;
 import com.android.systemui.statusbar.policy.KeyguardStateController;
 import com.android.systemui.statusbar.policy.LocationController;
 import com.android.systemui.toast.SystemUIToast;
@@ -194,6 +195,8 @@ public class InternetDetailsContentControllerTest extends SysuiTestCase {
     @Mock
     private CarrierNameCustomization mCarrierNameCustomization;
 
+    private HotspotController mHotspotController;
+
     private FakeFeatureFlags mFlags = new FakeFeatureFlags();
 
     private TestableResources mTestableResources;
@@ -244,7 +247,7 @@ public class InternetDetailsContentControllerTest extends SysuiTestCase {
                 mock(KeyguardUpdateMonitor.class), mGlobalSettings, mKeyguardStateController,
                 mWindowManager, mToastFactory, mWorkerHandler, mCarrierConfigTracker,
                 mLocationController, mDialogTransitionAnimator, mWifiStateWorker, mFlags,
-                mCarrierNameCustomization);
+                mCarrierNameCustomization, mHotspotController);
         mSubscriptionManager.addOnSubscriptionsChangedListener(mExecutor,
                 mInternetDetailsContentController.mOnSubscriptionsChangedListener);
         mInternetDetailsContentController.onStart(mInternetDialogCallback, true);

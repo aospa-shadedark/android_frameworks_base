@@ -22,6 +22,8 @@ import android.content.DialogInterface
 import android.graphics.drawable.Drawable
 import android.net.Network
 import android.net.NetworkCapabilities
+import android.net.wifi.SoftApConfiguration
+import android.net.wifi.WifiManager
 import android.os.Handler
 import android.telephony.ServiceState
 import android.telephony.SignalStrength
@@ -33,12 +35,14 @@ import android.text.TextUtils
 import android.text.method.LinkMovementMethod
 import android.util.Log
 import android.view.View
+import android.view.ViewGroup
 import android.view.ViewStub
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
+import android.widget.Space
 import android.widget.Switch
 import android.widget.TextView
 import androidx.annotation.MainThread
@@ -134,6 +138,14 @@ constructor(
     private lateinit var context: Context
     private lateinit var coroutineScope: CoroutineScope
 
+    private lateinit var hotspotLayout: LinearLayout
+    private lateinit var mobileConnectedSpace: Space
+    private lateinit var hotspotIcon: ImageView
+    private lateinit var hotspotTitleText: TextView
+    private lateinit var hotspotSummaryText: TextView
+    private lateinit var hotspotToggle: Switch
+    private lateinit var wifiConnectedSpace: Space
+
     var title by mutableStateOf("")
         private set
 
@@ -170,6 +182,7 @@ constructor(
         initializeLifecycle()
         initializeViews()
         updateDetailsUI(getStartingInternetContent())
+        updateHotspotUI()
         initializeAndConfigure()
     }
 
@@ -210,6 +223,7 @@ constructor(
         // Set wifi, mobile and ethernet layouts
         setWifiLayout()
         setMobileLayout()
+        setHotspotLayout()
         ethernetLayout = contentView.requireViewById(R.id.ethernet_layout)
 
         // Share WiFi
@@ -266,6 +280,8 @@ constructor(
                 adapter = this@InternetDetailsContentManager.adapter
             }
         seeAllLayout = contentView.requireViewById(R.id.see_all_layout)
+        wifiConnectedSpace = contentView.requireViewById(R.id.wifi_connected_space)
+
 
         // Set click listeners for Wi-Fi related views
         wifiToggle.setOnClickListener {
@@ -284,6 +300,7 @@ constructor(
         mobileSummaryTextView = contentView.requireViewById(R.id.mobile_summary)
         mobileDataToggle = contentView.requireViewById(R.id.mobile_toggle)
         mobileToggleDivider = contentView.requireViewById(R.id.mobile_toggle_divider)
+        mobileConnectedSpace = contentView.requireViewById(R.id.mobile_connected_space)
 
         // Set click listeners for mobile data related views
         mobileNetworkLayout.setOnClickListener {
@@ -309,6 +326,19 @@ constructor(
                     false,
                 )
             }
+        }
+    }
+
+    private fun setHotspotLayout() {
+        hotspotLayout = contentView.requireViewById(R.id.hotspot_layout)
+        hotspotIcon = contentView.requireViewById(R.id.hotspot_icon)
+        hotspotTitleText = contentView.requireViewById(R.id.hotspot_title)
+        hotspotSummaryText = contentView.requireViewById(R.id.hotspot_summary)
+        hotspotToggle = contentView.requireViewById(R.id.hotspot_toggle)
+
+        hotspotLayout.setOnClickListener(internetDetailsContentController::launchHotspotSetting)
+        hotspotToggle.setOnClickListener {
+            internetDetailsContentController.setHotspotEnabled(hotspotToggle.isChecked)
         }
     }
 
@@ -550,6 +580,7 @@ constructor(
             handler.post { signalIcon.setImageDrawable(drawable) }
         }
 
+        mobileConnectedSpace.visibility = if (isNetworkConnected) View.VISIBLE else View.GONE
         mobileDataToggle.visibility = if (canConfigMobileData) View.VISIBLE else View.INVISIBLE
         mobileToggleDivider.visibility = if (canConfigMobileData) View.VISIBLE else View.INVISIBLE
         val primaryColor =
@@ -634,6 +665,61 @@ constructor(
         signalIcon.setColorFilter(context.getColor(R.color.connected_network_secondary_color))
     }
 
+    private fun updateHotspotUI() {
+        if (!internetDetailsContentController.isHotspotAvailable()) {
+            hotspotLayout.visibility = View.GONE
+            return
+        }
+
+        hotspotLayout.visibility = View.VISIBLE
+        hotspotTitleText.setText(getHotspotTitle())
+        hotspotSummaryText.setText(getHotspotSummary())
+
+        val enabled = internetDetailsContentController.isHotspotEnabled()
+        hotspotIcon.setImageResource(
+            if (enabled) R.drawable.ic_internet_hotspot
+            else R.drawable.ic_internet_hotspot_disabled
+        )
+        hotspotToggle.setChecked(enabled)
+
+        val dataSaver = internetDetailsContentController.isDataSaverEnabled()
+        hotspotTitleText.setEnabled(!dataSaver)
+        hotspotSummaryText.setEnabled(!dataSaver)
+        hotspotToggle.setEnabled(!dataSaver)
+    }
+
+    private fun getHotspotTitle(): CharSequence {
+        val wifiManager = internetDetailsContentController.wifiManager
+        val softApConfig = wifiManager?.softApConfiguration
+        return softApConfig?.ssid
+            ?: context.getString(R.string.quick_settings_hotspot_label)
+    }
+
+    fun getHotspotSummary(): String {
+        return when {
+            internetDetailsContentController.isDataSaverEnabled() -> {
+                context.getString(R.string.quick_settings_hotspot_secondary_label_data_saver_enabled)
+            }
+            internetDetailsContentController.isHotspotTransient() -> {
+                context.getString(R.string.quick_settings_hotspot_secondary_label_transient)
+            }
+            internetDetailsContentController.isHotspotEnabled() -> {
+                val numDevices = internetDetailsContentController.getHotspotNumDevices()
+                if (numDevices > 0) {
+                    context.resources.getQuantityString(
+                        R.plurals.quick_settings_internet_hotspot_summary_num_devices,
+                        numDevices, numDevices
+                    )
+                } else {
+                    context.getString(R.string.switch_bar_on)
+                }
+            }
+            else -> {
+                context.getString(R.string.switch_bar_off)
+            }
+        }
+    }
+
     @MainThread
     private fun updateWifiToggle(internetContent: InternetContent) {
         if (wifiToggle.isChecked != internetContent.isWifiEnabled) {
@@ -645,9 +731,19 @@ constructor(
                 else R.style.TextAppearance_InternetDialog
             )
         }
-        turnWifiOnLayout.background =
-            if ((internetContent.isDeviceLocked && connectedWifiEntry != null)) backgroundOn
-            else null
+
+        val showBackground = internetContent.isDeviceLocked && connectedWifiEntry != null
+        val lp = turnWifiOnLayout.layoutParams
+        lp.height = context.resources.getDimensionPixelSize(
+            if (showBackground)
+                R.dimen.internet_dialog_wifi_network_height
+            else
+                R.dimen.internet_dialog_wifi_toggle_height
+        )
+        turnWifiOnLayout.layoutParams = lp
+        turnWifiOnLayout.background = if (showBackground) backgroundOn else null
+
+        wifiConnectedSpace.visibility = if (showBackground) View.VISIBLE else View.GONE
 
         if (!canChangeWifiState && wifiToggle.isEnabled) {
             wifiToggle.isEnabled = false
@@ -939,6 +1035,10 @@ constructor(
 
             override fun onWifiScan(isScan: Boolean) {
                 setProgressBarVisible(isScan)
+            }
+
+            override fun onHotspotChanged() {
+                updateHotspotUI()
             }
 
             override fun onFiveGStateOverride() {
