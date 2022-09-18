@@ -352,6 +352,15 @@ public class ExternalStorageProvider extends FileSystemProvider {
         return projection != null ? projection : DEFAULT_ROOT_PROJECTION;
     }
 
+    private boolean isNoStorageRestrictionEnabled() {
+        final Context context = getContext();
+        if (context == null) {
+            return false;
+        }
+        return Settings.System.getInt(context.getContentResolver(),
+                Settings.System.NO_STORAGE_RESTRICTION, 0) == 1;
+    }
+
     /**
      * Mark {@code Android/data/}, {@code Android/obb/} and {@code Android/sandbox/} on the
      * integrated shared ("external") storage along with all their content and subdirectories as
@@ -359,6 +368,10 @@ public class ExternalStorageProvider extends FileSystemProvider {
      */
     @Override
     protected boolean shouldHideDocument(@NonNull String documentId) {
+        if (isNoStorageRestrictionEnabled()) {
+            return false;
+        }
+
         // Don't need to hide anything on USB drives.
         if (isOnRemovableUsbStorage(documentId)) {
             return false;
@@ -460,6 +473,10 @@ public class ExternalStorageProvider extends FileSystemProvider {
         // Block the root of the storage
         if (normalizedPath.isEmpty()) {
             return true;
+        }
+
+        if (isNoStorageRestrictionEnabled()) {
+            return false;
         }
 
         // Block /Download/ and /Android/ folders from the tree.

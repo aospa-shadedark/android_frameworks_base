@@ -6139,6 +6139,14 @@ public final class Settings {
         public static final String ALLOW_APP_DOWNGRADE = "allow_app_downgrade";
 
         /**
+         * Whether to remove storage restrictions on Android/data and Android/obb.
+         * The value is boolean (1 = enabled, 0 = disabled).
+         * @hide
+         */
+        @Readable
+        public static final String NO_STORAGE_RESTRICTION = "no_storage_restriction";
+
+        /**
          * Persistent store for the system-wide default alarm alert.
          *
          * @see #RINGTONE
