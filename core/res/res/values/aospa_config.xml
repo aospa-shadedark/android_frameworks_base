@@ -81,4 +81,7 @@
     charging enabled status regardless of the current status. -->
     <bool name="config_chargingControlToggleSetAlways">false</bool>
 
+    <!-- Whether to use Richtap vibration -->
+    <bool name="config_usesRichtapVibration">false</bool>
+
 </resources>

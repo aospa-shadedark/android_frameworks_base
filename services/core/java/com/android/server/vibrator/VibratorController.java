@@ -26,6 +26,7 @@ import android.os.IVibratorStateListener;
 import android.os.Parcel;
 import android.os.RemoteCallbackList;
 import android.os.RemoteException;
+import android.os.RichTapVibrationEffect;
 import android.os.Trace;
 import android.os.VibrationEffect;
 import android.os.VibratorInfo;
@@ -62,6 +63,23 @@ final class VibratorController implements HalVibrator {
     private volatile State mCurrentState;
     private volatile float mCurrentAmplitude;
 
+    @Nullable
+    private RichTapVibratorService mRichTapService;
+
+    /**
+     * Listener for vibration completion callbacks from native.
+     *
+     * <p>Only the latest active native call to {@link VibratorController#on} will ever trigger this
+     * completion callback, to avoid race conditions during a vibration playback. If a new call to
+     * {@link #on} or {@link #off} happens before a previous callback was triggered then the
+     * previous callback will be disabled, even if the new command fails.
+     */
+    public interface OnVibrationCompleteListener {
+
+        /** Callback triggered when an active vibration command is complete. */
+        void onComplete(int vibratorId, long vibrationId, long stepId);
+    }
+
     VibratorController(int vibratorId) {
         this(vibratorId, new NativeWrapper());
     }
@@ -70,6 +88,10 @@ final class VibratorController implements HalVibrator {
         mNativeWrapper = nativeWrapper;
         mVibratorInfo = new VibratorInfo.Builder(vibratorId).build();
         mCurrentState = State.IDLE;
+
+        if (RichTapVibrationEffect.isSupported()) {
+            mRichTapService = new RichTapVibratorService();
+        }
     }
 
     @Override
@@ -218,7 +240,10 @@ final class VibratorController implements HalVibrator {
         try {
             boolean success = false;
             synchronized (mLock) {
-                if (mVibratorInfo.hasCapability(IVibrator.CAP_AMPLITUDE_CONTROL)) {
+                if (mRichTapService != null) {
+                    int strength = (int) (255.0f * amplitude);
+                    mRichTapService.richTapVibratorSetAmplitude(strength);
+                } else if (mVibratorInfo.hasCapability(IVibrator.CAP_AMPLITUDE_CONTROL)) {
                     mNativeWrapper.setAmplitude(amplitude);
                     success = true;
                 }
@@ -237,7 +262,13 @@ final class VibratorController implements HalVibrator {
         Trace.traceBegin(TRACE_TAG_VIBRATOR, "HalVibrator.onMillis");
         try {
             synchronized (mLock) {
-                long duration = mNativeWrapper.on(milliseconds, vibrationId, stepId);
+                long duration = 0;
+                if (mRichTapService != null) {
+                    duration = milliseconds;
+                    mRichTapService.richTapVibratorOn(duration);
+                } else {
+                    duration = mNativeWrapper.on(milliseconds, vibrationId, stepId);
+                }
                 if (duration > 0) {
                     updateStateAndNotifyListenersLocked(State.VIBRATING);
                 }
@@ -275,8 +306,19 @@ final class VibratorController implements HalVibrator {
         Trace.traceBegin(TRACE_TAG_VIBRATOR, "HalVibrator.onPrebaked");
         try {
             synchronized (mLock) {
-                long duration = mNativeWrapper.perform(prebaked.getEffectId(),
-                        prebaked.getEffectStrength(), vibrationId, stepId);
+                long duration = 0;
+                if (mRichTapService != null) {
+                    int[] pattern = RichTapVibrationEffect.getInnerEffect(prebaked.getEffectId());
+                    int strength = RichTapVibrationEffect.getInnerEffectStrength(
+                            prebaked.getEffectStrength());
+                    if (pattern != null) {
+                        duration = 30;
+                        mRichTapService.richTapVibratorOnRawPattern(pattern, strength, 0);
+                    } else {
+                        duration = mNativeWrapper.perform(prebaked.getEffectId(),
+                            prebaked.getEffectStrength(), vibrationId, stepId);
+                    }
+                }
                 if (duration > 0) {
                     updateStateAndNotifyListenersLocked(State.VIBRATING);
                 }
