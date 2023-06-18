@@ -305,6 +305,7 @@ public class SecureSettings {
         Settings.Secure.SELECTED_SPELL_CHECKER_SUBTYPE,
         Settings.Secure.DOZE_PICK_UP_GESTURE_AMBIENT,
         Settings.Secure.DOZE_TAP_GESTURE_AMBIENT,
-        Settings.Secure.DOZE_ON_CHARGE
+        Settings.Secure.DOZE_ON_CHARGE,
+        Settings.Secure.BERRY_BLACK_THEME
     };
 }
