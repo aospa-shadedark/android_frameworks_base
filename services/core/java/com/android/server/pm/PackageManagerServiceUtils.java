@@ -45,6 +45,7 @@ import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.UserIdInt;
+import android.app.ActivityThread;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
@@ -78,6 +79,7 @@ import android.os.incremental.V4Signature;
 import android.os.incremental.V4Signature.HashingInfo;
 import android.os.storage.DiskInfo;
 import android.os.storage.VolumeInfo;
+import android.provider.Settings;
 import android.service.pm.PackageServiceDumpProto;
 import android.stats.storage.StorageEnums;
 import android.system.ErrnoException;
@@ -918,6 +920,12 @@ public class PackageManagerServiceUtils {
      *         {@code applicationFlags}.
      */
     public static boolean isDowngradePermitted(int installFlags, boolean isAppDebuggable) {
+        final Context app = ActivityThread.currentApplication();
+        if (app != null && Settings.System.getInt(app.getContentResolver(),
+                Settings.System.ALLOW_APP_DOWNGRADE, 0) == 1) {
+            return true;
+        }
+
         // If installed, the package will get access to data left on the device by its
         // predecessor. As a security measure, this is permitted only if this is not a
         // version downgrade or if the predecessor package is marked as debuggable and

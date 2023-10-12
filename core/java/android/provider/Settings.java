@@ -6131,6 +6131,14 @@ public final class Settings {
         public static final String LS_MEDIA_ART_ENABLED = "ls_media_art_enabled";
 
         /**
+         * Whether to allow downgrading installed apps to older versions.
+         * The value is boolean (1 = enabled, 0 = disabled).
+         * @hide
+         */
+        @Readable
+        public static final String ALLOW_APP_DOWNGRADE = "allow_app_downgrade";
+
+        /**
          * Persistent store for the system-wide default alarm alert.
          *
          * @see #RINGTONE
