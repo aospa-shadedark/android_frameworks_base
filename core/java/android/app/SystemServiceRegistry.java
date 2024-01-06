@@ -339,6 +339,9 @@ import com.android.internal.telecom.TelecomDependencies;
 import com.android.internal.util.Preconditions;
 import com.android.modules.utils.ravenwood.RavenwoodHelper;
 
+import com.android.internal.display.IRefreshRateManagerService;
+import com.android.internal.display.RefreshRateManager;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -2113,6 +2116,15 @@ public final class SystemServiceRegistry {
                         return new android.uilatencystats.UiLatencyStatsManager(ctx, service);
                     }
                 });
+
+        registerService(Context.REFRESH_RATE_MANAGER_SERVICE, RefreshRateManager.class,
+                new CachedServiceFetcher<RefreshRateManager>() {
+            @Override
+            public RefreshRateManager createService(ContextImpl ctx) {
+                IBinder binder = ServiceManager.getService(Context.REFRESH_RATE_MANAGER_SERVICE);
+                IRefreshRateManagerService service = IRefreshRateManagerService.Stub.asInterface(binder);
+                return new RefreshRateManager(ctx.getOuterContext(), service);
+            }});
 
         if (interactiveChooser()) {
             registerService(

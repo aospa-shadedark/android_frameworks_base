@@ -360,6 +360,7 @@ import java.util.concurrent.Future;
 
 import com.android.qcomfeatureconfig.QcomLowRamConfig;
 import vendor.qti.applauncher.AppLauncherService;
+import com.android.server.RefreshRateService;
 
 /**
  * Entry point to {@code system_server}.
@@ -1804,6 +1805,10 @@ public final class SystemServer implements Dumpable {
 
             t.traceBegin("WindowManagerServiceOnInitReady");
             wm.onInitReady();
+            t.traceEnd();
+
+            t.traceBegin("StartRefreshRateService");
+            mSystemServiceManager.startService(RefreshRateService.class);
             t.traceEnd();
 
             // Start receiving calls from SensorManager services. Start in a separate thread

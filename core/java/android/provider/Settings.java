@@ -7231,6 +7231,18 @@ public final class Settings {
         public static final String LOCK_GESTURE_STATUS = "lock_gesture_status";
 
         /**
+         * Per-app refresh rate config.
+         * @hide
+         */
+        public static final String REFRESH_RATE_CONFIG_CUSTOM = "refresh_rate_config_custom";
+
+        /**
+         * Force highest refresh rate in all apps.
+         * @hide
+         */
+        public static final String EXTREME_REFRESH_RATE = "extreme_refresh_rate";
+
+        /**
          * Whether to show power menu on LockScreen
          * @hide
          */
