@@ -6106,6 +6106,23 @@ public final class Settings {
             "notification_cooldown_vibrate_unlocked";
 
         /**
+         * Whether notification sounds and vibration should be suppressed while the screen is on.
+         * The value is boolean (1 = enabled, 0 = disabled).
+         * @hide
+         */
+        @Readable
+        public static final String NOTIFICATION_SOUND_VIB_SCREEN_ON =
+                "notification_sound_vib_screen_on";
+
+
+        /**
+         * Whether lockscreen media artwork is shown as the lockscreen background.
+         * @hide
+         */
+        @Readable
+        public static final String LS_MEDIA_ART_ENABLED = "ls_media_art_enabled";
+
+        /**
          * Persistent store for the system-wide default alarm alert.
          *
          * @see #RINGTONE
@@ -14879,6 +14896,14 @@ public final class Settings {
         public static final String REMOVE_GUEST_ON_EXIT = "remove_guest_on_exit";
 
         /**
+         * Whether screenshot and screen recording detection callbacks are hidden from apps.
+         * The value is boolean (1 = hide, 0 = show).
+         * @hide
+         */
+        @Readable
+        public static final String HIDE_SCREEN_CAPTURE_STATUS = "hide_screen_capture_status";
+
+        /**
          * Whether applying ramping ringer on incoming phone call ringtone.
          * <p>1 = apply ramping ringer
          * <p>0 = do not apply ramping ringer
@@ -16354,6 +16379,19 @@ public final class Settings {
         @Readable
         public static final String TETHER_ENABLE_LEGACY_DHCP_SERVER =
                 "tether_enable_legacy_dhcp_server";
+
+        /**
+         * One-time Wi-Fi hotspot data limit controls.
+         * @hide
+         */
+        @Readable
+        public static final String HOTSPOT_DATA_LIMIT_ENABLED = "hotspot_data_limit_enabled";
+        /** @hide */
+        @Readable
+        public static final String HOTSPOT_DATA_LIMIT_BYTES = "hotspot_data_limit_bytes";
+        /** @hide */
+        @Readable
+        public static final String HOTSPOT_DATA_LIMIT_ACTION = "hotspot_data_limit_action";
 
         /**
          * List of certificate (hex string representation of the application's certificate - SHA-1

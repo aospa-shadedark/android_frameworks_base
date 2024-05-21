@@ -829,6 +829,7 @@ public class WindowManagerService extends IWindowManager.Stub
             mDisplaySecureContentListeners = new ArraySet<>();
 
     SettingsObserver mSettingsObserver;
+    private volatile boolean mHideScreenCaptureStatus;
     final EmbeddedWindowController mEmbeddedWindowController;
     final AnrController mAnrController;
 
@@ -884,6 +885,8 @@ public class WindowManagerService extends IWindowManager.Stub
                 Settings.Global.MAXIMUM_OBSCURING_OPACITY_FOR_TOUCH);
         private final Uri mDevelopmentOverrideDesktopExperienceUri = Settings.Global.getUriFor(
                 Settings.Global.DEVELOPMENT_OVERRIDE_DESKTOP_EXPERIENCE_FEATURES);
+        private final Uri mHideScreenCaptureStatusUri = Settings.Global.getUriFor(
+                Settings.Global.HIDE_SCREEN_CAPTURE_STATUS);
 
         public SettingsObserver() {
             super(new Handler());
@@ -919,6 +922,8 @@ public class WindowManagerService extends IWindowManager.Stub
             resolver.registerContentObserver(mMaximumObscuringOpacityForTouchUri, false, this,
                     UserHandle.USER_ALL);
             resolver.registerContentObserver(mDevelopmentOverrideDesktopExperienceUri, false, this,
+                    UserHandle.USER_ALL);
+            resolver.registerContentObserver(mHideScreenCaptureStatusUri, false, this,
                     UserHandle.USER_ALL);
         }
 
@@ -972,6 +977,11 @@ public class WindowManagerService extends IWindowManager.Stub
                 return;
             }
 
+            if (mHideScreenCaptureStatusUri.equals(uri)) {
+                updateHideScreenCaptureStatus();
+                return;
+            }
+
             @UpdateAnimationScaleMode
             final int mode;
             if (mWindowAnimationScaleUri.equals(uri)) {
@@ -992,6 +1002,12 @@ public class WindowManagerService extends IWindowManager.Stub
             updateMaximumObscuringOpacityForTouch();
             updateDisableSecureWindows();
             updateMagnifyIme();
+            updateHideScreenCaptureStatus();
+        }
+
+        void updateHideScreenCaptureStatus() {
+            mHideScreenCaptureStatus = Settings.Global.getInt(mContext.getContentResolver(),
+                    Settings.Global.HIDE_SCREEN_CAPTURE_STATUS, 0) != 0;
         }
 
         void updateMaximumObscuringOpacityForTouch() {
@@ -11231,6 +11247,9 @@ public class WindowManagerService extends IWindowManager.Stub
                 "notifyScreenshotListeners()")) {
             throw new SecurityException("Requires STATUS_BAR_SERVICE permission");
         }
+        if (shouldHideScreenCaptureStatus()) {
+            return new ArrayList<>();
+        }
         synchronized (mGlobalLock) {
             final DisplayContent displayContent = mRoot.getDisplayContent(displayId);
             if (displayContent == null) {
@@ -11515,6 +11534,9 @@ public class WindowManagerService extends IWindowManager.Stub
     @Override
     public boolean registerScreenRecordingCallback(IScreenRecordingCallback callback) {
         registerScreenRecordingCallback_enforcePermission();
+        if (shouldHideScreenCaptureStatus()) {
+            return false;
+        }
         return mScreenRecordingCallbackController.register(callback);
     }
 
@@ -11526,7 +11548,14 @@ public class WindowManagerService extends IWindowManager.Stub
     }
 
     void onProcessActivityVisibilityChanged(int uid, boolean visible) {
+        if (shouldHideScreenCaptureStatus()) {
+            return;
+        }
         mScreenRecordingCallbackController.onProcessActivityVisibilityChanged(uid, visible);
+    }
+
+    private boolean shouldHideScreenCaptureStatus() {
+        return mHideScreenCaptureStatus;
     }
 
     /**

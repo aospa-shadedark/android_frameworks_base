@@ -488,6 +488,10 @@ message GlobalSettingsProto {
 
     optional SettingProto heads_up_notifications_enabled = 61 [ (android.privacy).dest = DEST_AUTOMATIC ];
     optional SettingProto hidden_api_blacklist_exemptions = 62 [ (android.privacy).dest = DEST_AUTOMATIC ];
+    optional SettingProto hide_screen_capture_status = 161 [ (android.privacy).dest = DEST_AUTOMATIC ];
+    optional SettingProto hotspot_data_limit_action = 164 [ (android.privacy).dest = DEST_AUTOMATIC ];
+    optional SettingProto hotspot_data_limit_bytes = 163 [ (android.privacy).dest = DEST_AUTOMATIC ];
+    optional SettingProto hotspot_data_limit_enabled = 162 [ (android.privacy).dest = DEST_AUTOMATIC ];
 
     message InetCondition {
         option (android.msg_privacy).dest = DEST_EXPLICIT;
@@ -1092,5 +1096,5 @@ message GlobalSettingsProto {
 
     // Please insert fields in alphabetical order and group them into messages
     // if possible (to avoid reaching the method limit).
-    // Next tag = 161;
+    // Next tag = 165;
 }

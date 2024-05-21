@@ -831,6 +831,18 @@ class SettingsProtoDumpUtil {
         dumpSetting(s, p,
                 Settings.Global.HIDDEN_API_BLACKLIST_EXEMPTIONS,
                 GlobalSettingsProto.HIDDEN_API_BLACKLIST_EXEMPTIONS);
+        dumpSetting(s, p,
+                Settings.Global.HIDE_SCREEN_CAPTURE_STATUS,
+                GlobalSettingsProto.HIDE_SCREEN_CAPTURE_STATUS);
+        dumpSetting(s, p,
+                Settings.Global.HOTSPOT_DATA_LIMIT_ACTION,
+                GlobalSettingsProto.HOTSPOT_DATA_LIMIT_ACTION);
+        dumpSetting(s, p,
+                Settings.Global.HOTSPOT_DATA_LIMIT_BYTES,
+                GlobalSettingsProto.HOTSPOT_DATA_LIMIT_BYTES);
+        dumpSetting(s, p,
+                Settings.Global.HOTSPOT_DATA_LIMIT_ENABLED,
+                GlobalSettingsProto.HOTSPOT_DATA_LIMIT_ENABLED);
 
         final long inetCondToken = p.start(GlobalSettingsProto.INET_CONDITION);
         dumpSetting(s, p,
@@ -2942,6 +2954,9 @@ class SettingsProtoDumpUtil {
         dumpSetting(s, p,
                 Settings.System.LOCKSCREEN_DISABLED,
                 SystemSettingsProto.Lockscreen.DISABLED);
+        dumpSetting(s, p,
+                Settings.System.LS_MEDIA_ART_ENABLED,
+                SystemSettingsProto.Lockscreen.MEDIA_ART_ENABLED);
         p.end(lockscreenToken);
 
         dumpSetting(s, p,
@@ -2967,6 +2982,9 @@ class SettingsProtoDumpUtil {
         dumpSetting(s, p,
                 Settings.System.SCREEN_FLASH_NOTIFICATION,
                 SystemSettingsProto.Notification.SCREEN_FLASH_NOTIFICATION);
+        dumpSetting(s, p,
+                Settings.System.NOTIFICATION_SOUND_VIB_SCREEN_ON,
+                SystemSettingsProto.Notification.SOUND_VIB_SCREEN_ON);
         dumpSetting(s, p,
                 Settings.System.SCREEN_FLASH_NOTIFICATION_COLOR,
                 SystemSettingsProto.Notification.SCREEN_FLASH_NOTIFICATION_COLOR_GLOBAL);
