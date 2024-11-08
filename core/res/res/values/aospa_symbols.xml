@@ -113,4 +113,8 @@
     <!-- Defines the actions shown in advanced reboot submenu -->
     <java-symbol type="array" name="config_restartActionsList" />
 
+    <!-- Light / Regular style fonts -->
+    <java-symbol type="string" name="config_lightFontFamily" />
+    <java-symbol type="string" name="config_regularFontFamily" />
+
 </resources>
