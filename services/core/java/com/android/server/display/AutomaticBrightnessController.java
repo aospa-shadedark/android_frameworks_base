@@ -31,12 +31,14 @@ import android.app.TaskStackListener;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.database.ContentObserver;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.hardware.display.BrightnessConfiguration;
 import android.hardware.display.DisplayManagerInternal.DisplayPowerRequest;
+import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -44,6 +46,7 @@ import android.os.PowerManager;
 import android.os.RemoteException;
 import android.os.SystemClock;
 import android.os.Trace;
+import android.provider.Settings;
 import android.util.EventLog;
 import android.util.IndentingPrintWriter;
 import android.util.MathUtils;
@@ -54,6 +57,7 @@ import android.view.Display;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.display.BrightnessSynchronizer;
+import com.android.internal.display.BrightnessUtils;
 import com.android.internal.os.BackgroundThread;
 import com.android.server.EventLogTags;
 import com.android.server.display.brightness.BrightnessEvent;
@@ -289,6 +293,9 @@ public class AutomaticBrightnessController {
     private final Injector mInjector;
 
     private final DisplayManagerFlags mDisplayManagerFlags;
+    private final SettingsObserver mSettingsObserver;
+    private int mUserMinBrightness;
+    private boolean mSettingsObserverRegistered;
 
     AutomaticBrightnessController(Callbacks callbacks, Looper looper,
             SensorManager sensorManager, Sensor lightSensor,
@@ -362,6 +369,8 @@ public class AutomaticBrightnessController {
         mShortTermModel = new ShortTermModel();
         mPausedShortTermModel = new ShortTermModel();
         mHandler = new AutomaticBrightnessHandler(looper);
+        mSettingsObserver = new SettingsObserver(mHandler);
+        mSettingsObserver.updateUserMinBrightness();
         mAmbientLightRingBuffer =
             new AmbientLightRingBuffer(mNormalLightSensorRate, mAmbientLightHorizonLong, mClock);
 
@@ -479,6 +488,14 @@ public class AutomaticBrightnessController {
         }
         changed |= setLightSensorEnabled(enable);
 
+        if (enable && !mSettingsObserverRegistered) {
+            mSettingsObserver.observe();
+            mSettingsObserverRegistered = true;
+        } else if (!enable && mSettingsObserverRegistered) {
+            mSettingsObserver.stop();
+            mSettingsObserverRegistered = false;
+        }
+
         boolean isBrightnessThrottled = mBrightnessClamperController.isThrottled();
         if (mIsBrightnessThrottled != isBrightnessThrottled) {
             // Maximum brightness has changed, so recalculate display brightness.
@@ -493,6 +510,10 @@ public class AutomaticBrightnessController {
 
     public void stop() {
         setLightSensorEnabled(false);
+        if (mSettingsObserverRegistered) {
+            mSettingsObserver.stop();
+            mSettingsObserverRegistered = false;
+        }
     }
 
     public boolean hasUserDataPoints() {
@@ -1002,6 +1023,14 @@ public class AutomaticBrightnessController {
                 mForegroundAppCategory);
         mRawScreenAutoBrightness = value;
         float newScreenAutoBrightness = clampScreenBrightness(value);
+        final float userMinBrightness = getUserMinimumBrightness();
+        final boolean belowUserMinimum = !isManuallySet && mUserMinBrightness > 0
+                && !Float.isNaN(mScreenAutoBrightness)
+                && mScreenAutoBrightness < userMinBrightness;
+        if (!isManuallySet && mUserMinBrightness > 0) {
+            newScreenAutoBrightness = clampScreenBrightness(
+                    Math.max(newScreenAutoBrightness, userMinBrightness));
+        }
 
         // The min/max range can change for brightness due to HBM. See if the current brightness
         // value still falls within the current range (which could have changed).
@@ -1011,6 +1040,7 @@ public class AutomaticBrightnessController {
         // in which case we ignore the new screen brightness if it doesn't differ enough from the
         // previous one.
         boolean withinThreshold = !Float.isNaN(mScreenAutoBrightness)
+                && !belowUserMinimum
                 && newScreenAutoBrightness > mScreenDarkeningThreshold
                 && newScreenAutoBrightness < mScreenBrighteningThreshold;
 
@@ -1056,6 +1086,16 @@ public class AutomaticBrightnessController {
     // Clamps values with float range [0.0-1.0]
     private float clampScreenBrightness(float value) {
         return MathUtils.constrain(value, getMinBrightness(), getMaxBrightness());
+    }
+
+    private float getUserMinimumBrightness() {
+        if (mUserMinBrightness <= 0) {
+            return 0f;
+        }
+        final float min = PowerManager.BRIGHTNESS_OFF + 1;
+        final float max = PowerManager.BRIGHTNESS_ON;
+        final float userBrightness = min + (mUserMinBrightness / 100f) * (max - min);
+        return BrightnessUtils.convertGammaToLinear(MathUtils.norm(min, max, userBrightness));
     }
 
     private float getMinBrightness() {
@@ -1452,6 +1492,43 @@ public class AutomaticBrightnessController {
             // Not used.
         }
     };
+
+    private final class SettingsObserver extends ContentObserver {
+        SettingsObserver(Handler handler) {
+            super(handler);
+        }
+
+        void observe() {
+            mContext.getContentResolver().registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.USER_MIN_AUTO_BRIGHTNESS),
+                    false, this);
+            updateUserMinBrightness();
+        }
+
+        void stop() {
+            mContext.getContentResolver().unregisterContentObserver(this);
+        }
+
+        private void updateUserMinBrightness() {
+            final int brightness = Settings.Global.getInt(mContext.getContentResolver(),
+                    Settings.Global.USER_MIN_AUTO_BRIGHTNESS, 0);
+            if (mUserMinBrightness == brightness) {
+                return;
+            }
+            mUserMinBrightness = brightness;
+            if (mAmbientLuxValid && mLightSensorEnabled) {
+                updateAutoBrightness(true /* sendUpdate */, false /* isManuallySet */);
+            }
+        }
+
+        @Override
+        public void onChange(boolean selfChange, Uri uri) {
+            if (uri == null || Settings.Global.USER_MIN_AUTO_BRIGHTNESS.equals(
+                    uri.getLastPathSegment())) {
+                updateUserMinBrightness();
+            }
+        }
+    }
 
     // Call back whenever the tasks stack changes, which includes tasks being created, removed, and
     // moving to top.
