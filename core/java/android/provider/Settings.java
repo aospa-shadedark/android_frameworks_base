@@ -21297,6 +21297,13 @@ public final class Settings {
                 "redact_otp_notifications_from_untrusted_listeners";
 
         /**
+         * Minimum brightness for automatic brightness, as a percentage.
+         * @hide
+         */
+        @Readable
+        public static final String USER_MIN_AUTO_BRIGHTNESS = "user_min_auto_brightness";
+
+        /**
          * Timeout used to dismiss the Global Actions Dialog to avoid the possibility of
          * OLED burn-in from the dialog.
          * @hide
