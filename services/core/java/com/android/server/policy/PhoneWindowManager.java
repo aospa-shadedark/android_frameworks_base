@@ -2017,7 +2017,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
             mEndCallKeyHandled = true;
             performHapticFeedback(HapticFeedbackConstants.LONG_PRESS,
                     "End Call - Long Press - Show Global Actions");
-            showGlobalActionsInternal();
+            showGlobalActions();
         }
     };
 
@@ -2029,6 +2029,25 @@ public class PhoneWindowManager implements WindowManagerPolicy {
 
     @Override
     public void showGlobalActions() {
+        if (isKeyguardShowing() && isKeyguardSecure(mCurrentUserId)) {
+            mKeyguardDelegate.dismiss(new IKeyguardDismissCallback.Stub() {
+                @Override
+                public void onDismissSucceeded() {
+                    dispatchShowGlobalActions();
+                }
+
+                @Override
+                public void onDismissError() { }
+
+                @Override
+                public void onDismissCancelled() { }
+            }, /*message=*/ null);
+        } else {
+            dispatchShowGlobalActions();
+        }
+    }
+
+    private void dispatchShowGlobalActions() {
         mHandler.removeMessages(MSG_DISPATCH_SHOW_GLOBAL_ACTIONS);
         mHandler.sendEmptyMessage(MSG_DISPATCH_SHOW_GLOBAL_ACTIONS);
     }
