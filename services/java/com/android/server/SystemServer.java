@@ -118,6 +118,7 @@ import com.android.server.adb.AdbService;
 import com.android.server.alarm.AlarmManagerService;
 import com.android.server.am.ActivityManagerService;
 import com.android.server.ambientcontext.AmbientContextManagerService;
+import com.android.server.aospa.AttestationService;
 import com.android.server.app.GameManagerService;
 import com.android.server.appbinding.AppBindingService;
 import com.android.server.apphibernation.AppHibernationService;
@@ -2710,6 +2711,11 @@ public final class SystemServer implements Dumpable {
 
             t.traceBegin("StartPocketService");
             mSystemServiceManager.startService(PocketService.class);
+            t.traceEnd();
+
+           // AttestationService
+            t.traceBegin("AttestationService");
+            mSystemServiceManager.startService(AttestationService.class);
             t.traceEnd();
 
             if (!context.getResources().getString(
