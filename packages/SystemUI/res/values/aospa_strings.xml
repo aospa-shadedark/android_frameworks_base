@@ -12,6 +12,7 @@
     <string name="status_bar_roaming">Roaming indicator</string>
     <string name="status_bar_vowifi">Wi-Fi calling (VoWiFi)</string>
     <string name="status_bar_wifi_standard">Wi-Fi standard number</string>
+    <string name="status_bar_bluetooth_battery_level">Bluetooth battery level</string>
 
     <!-- Privacy Indicator -->
     <string name="mic_camera_privacy_indicator_title">Mic and camera privacy indicator</string>

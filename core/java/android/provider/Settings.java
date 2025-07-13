@@ -7826,6 +7826,13 @@ public final class Settings {
             Secure.WIFI_WATCHDOG_PING_TIMEOUT_MS;
 
         /**
+         * Whether to show bluetooth battery level in status bar.
+         * @hide
+         */
+        @Readable
+        public static final String BLUETOOTH_BATTERY_LEVEL = "bluetooth_battery_level";
+
+        /**
          * Checks if the specified app can modify system settings. As of API
          * level 23, an app cannot modify system settings unless it declares the
          * {@link android.Manifest.permission#WRITE_SETTINGS}

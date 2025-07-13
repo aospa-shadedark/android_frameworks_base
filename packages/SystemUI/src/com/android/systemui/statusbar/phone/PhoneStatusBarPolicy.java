@@ -49,7 +49,9 @@ import android.os.Process;
 import android.os.RemoteException;
 import android.os.UserHandle;
 import android.os.UserManager;
+import android.provider.Settings;
 import android.provider.Settings.Global;
+import com.android.systemui.tuner.TunerService;
 import android.service.notification.ZenModeConfig;
 import android.telecom.TelecomManager;
 import android.text.format.DateFormat;
@@ -118,9 +120,11 @@ public class PhoneStatusBarPolicy
                 KeyguardStateController.Callback,
                 PrivacyItemController.Callback,
                 LocationController.LocationChangeCallback,
-                ScreenRecordUxController.StateChangeCallback {
+                ScreenRecordUxController.StateChangeCallback,
+                TunerService.Tunable {
     private static final String TAG = "PhoneStatusBarPolicy";
     private static final boolean DEBUG = Log.isLoggable(TAG, Log.DEBUG);
+    private static final String BLUETOOTH_BATTERY_LEVEL = "system:" + Settings.System.BLUETOOTH_BATTERY_LEVEL;
 
     static final int LOCATION_STATUS_ICON_ID = PrivacyType.TYPE_LOCATION.getIconId();
 
@@ -194,6 +198,8 @@ public class PhoneStatusBarPolicy
 
     private final FiveGServiceClient mFiveGServiceClient;
     private NfcAdapter mAdapter;
+    private final TunerService mTunerService;
+    private boolean mShowBluetoothBatteryLevel = true;
 
     @Inject
     public PhoneStatusBarPolicy(Context context, StatusBarIconController iconController,
@@ -217,7 +223,8 @@ public class PhoneStatusBarPolicy
             PrivacyLogger privacyLogger,
             ConnectedDisplayInteractor connectedDisplayInteractor,
             ZenModeInteractor zenModeInteractor,
-            JavaAdapter javaAdapter, FiveGServiceClient fiveGServiceClient
+            JavaAdapter javaAdapter, FiveGServiceClient fiveGServiceClient,
+            TunerService tunerService
     ) {
         mContext = context;
         mIconController = iconController;
@@ -250,6 +257,7 @@ public class PhoneStatusBarPolicy
         mZenModeInteractor = zenModeInteractor;
         mJavaAdapter = javaAdapter;
         mFiveGServiceClient = fiveGServiceClient;
+        mTunerService = tunerService;
         mSlotTurboDsda = resources.getString(R.string.status_bar_turbo_dsda);
         mConnectivityManager = context.getSystemService(ConnectivityManager.class);
 
@@ -308,6 +316,7 @@ public class PhoneStatusBarPolicy
         updateTTY();
 
         // bluetooth status
+        mTunerService.addTunable(this, BLUETOOTH_BATTERY_LEVEL);
         updateBluetooth();
 
         // Alarm clock
@@ -547,7 +556,7 @@ public class PhoneStatusBarPolicy
         int batteryLevel = -1;
         if (mBluetooth != null && mBluetooth.isBluetoothConnected()) {
             bluetoothVisible = mBluetooth.isBluetoothEnabled();
-            batteryLevel = mBluetooth.getBatteryLevel();
+            batteryLevel = mShowBluetoothBatteryLevel ? mBluetooth.getBatteryLevel() : -1;
             contentDescription = mResources.getString(
                     R.string.accessibility_bluetooth_connected);
         }
@@ -980,6 +989,14 @@ public class PhoneStatusBarPolicy
             );
         }
     };
+
+    @Override
+    public void onTuningChanged(String key, String newValue) {
+        if (BLUETOOTH_BATTERY_LEVEL.equals(key)) {
+            mShowBluetoothBatteryLevel = TunerService.parseIntegerSwitch(newValue, true);
+            updateBluetooth();
+        }
+    }
 
     public static class BluetoothIconState {
         public boolean visible;
