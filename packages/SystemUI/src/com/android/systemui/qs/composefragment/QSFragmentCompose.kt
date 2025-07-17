@@ -1514,7 +1514,7 @@ fun QuickSettingsLayout(
     sliderAtTop: Boolean,
 ) {
     Column(
-        verticalArrangement = spacedBy(QuickSettingsShade.Dimensions.VerticalPadding),
+        verticalArrangement = spacedBy(dimensionResource(R.dimen.qs_tile_margin_vertical)),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         if (showSlider != 0 && sliderAtTop) brightness()
