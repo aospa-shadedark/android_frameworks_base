@@ -40,4 +40,7 @@
     <!-- Network traffic -->
     <string name="network_traffic_title">Network traffic indicator</string>
 
+    <!-- Bluetooth battery status -->
+    <string name="status_bar_bluetooth_battery_title">Bluetooth battery status</string>
+
 </resources>
