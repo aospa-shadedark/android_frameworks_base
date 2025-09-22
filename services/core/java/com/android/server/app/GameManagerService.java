@@ -1048,7 +1048,20 @@ public final class GameManagerService extends IGameManagerService.Stub {
         try {
             final ApplicationInfo applicationInfo = mPackageManager
                     .getApplicationInfoAsUser(packageName, PackageManager.MATCH_ALL, userId);
-            return applicationInfo.category == ApplicationInfo.CATEGORY_GAME;
+            if (applicationInfo.category == ApplicationInfo.CATEGORY_GAME) return true;
+            // Pentas also offers GameManager controls for apps the user adds manually.
+            final String games = Settings.System.getStringForUser(
+                    mContext.getContentResolver(), Settings.System.GAMESPACE_GAME_LIST, userId);
+            if (games != null) {
+                for (String entry : games.split(";")) {
+                    final int separator = entry.indexOf('=');
+                    if (separator > 0
+                            && packageName.equals(entry.substring(0, separator).trim())) {
+                        return true;
+                    }
+                }
+            }
+            return false;
         } catch (PackageManager.NameNotFoundException e) {
             return false;
         }
