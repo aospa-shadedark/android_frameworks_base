@@ -752,6 +752,8 @@ public final class InputMethodManagerService implements IInputMethodManagerImpl.
                     Settings.Secure.ACCESSIBILITY_SOFT_KEYBOARD_MODE), false, this, userId);
             resolver.registerContentObserver(Settings.Secure.getUriFor(
                     STYLUS_HANDWRITING_ENABLED), false, this);
+            resolver.registerContentObserver(Settings.Secure.getUriFor(
+                    Settings.Secure.NAVBAR_IME_SPACE), false, this, userId);        
             mRegistered = true;
         }
 
@@ -763,6 +765,8 @@ public final class InputMethodManagerService implements IInputMethodManagerImpl.
                     Settings.Secure.ACCESSIBILITY_SOFT_KEYBOARD_MODE);
             final Uri stylusHandwritingEnabledUri = Settings.Secure.getUriFor(
                     STYLUS_HANDWRITING_ENABLED);
+            final Uri navbarImeSpaceUri = Settings.Secure.getUriFor(
+                    Settings.Secure.NAVBAR_IME_SPACE);        
             synchronized (ImfLock.class) {
                 if (showImeUri.equals(uri)) {
                     mMenuController.updateKeyboardFromSettingsLocked();
@@ -784,6 +788,8 @@ public final class InputMethodManagerService implements IInputMethodManagerImpl.
                     InputMethodManager.invalidateLocalStylusHandwritingAvailabilityCaches();
                     InputMethodManager
                             .invalidateLocalConnectionlessStylusHandwritingAvailabilityCaches();
+                } else if (navbarImeSpaceUri.equals(uri)) {
+                    sendOnNavButtonFlagsChangedLocked();            
                 } else {
                     boolean enabledChanged = false;
                     String newEnabled = InputMethodSettingsRepository.get(mCurrentUserId)
@@ -2707,8 +2713,10 @@ public final class InputMethodManagerService implements IInputMethodManagerImpl.
         final boolean hasNavigationBar = mWindowManagerInternal
                 .hasNavigationBar(tokenDisplayId != INVALID_DISPLAY
                         ? tokenDisplayId : DEFAULT_DISPLAY);
+        final boolean showImeSpace = Settings.Secure.getIntForUser(
+                mContext.getContentResolver(), Settings.Secure.NAVBAR_IME_SPACE, 1, mCurrentUserId) == 1;                
         final boolean canImeDrawsImeNavBar =
-                mImeDrawsImeNavBarRes != null && mImeDrawsImeNavBarRes.get() && hasNavigationBar;
+                mImeDrawsImeNavBarRes != null && mImeDrawsImeNavBarRes.get() && hasNavigationBar && showImeSpace;
         final boolean shouldShowImeSwitcherWhenImeIsShown = shouldShowImeSwitcherLocked(
                 InputMethodService.IME_ACTIVE | InputMethodService.IME_VISIBLE,
                 mCurrentUserId);

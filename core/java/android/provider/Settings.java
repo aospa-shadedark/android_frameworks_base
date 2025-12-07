@@ -13021,6 +13021,12 @@ public final class Settings {
         public static final String NAVIGATION_BAR_HINT = "navigation_bar_hint";
 
         /**
+         * Show navigation space below IME
+         * @hide
+         */
+        public static final String NAVBAR_IME_SPACE = "navbar_ime_space";        
+
+        /**
          * Control whether FLAG_SECURE is ignored for all windows.
          * @hide
          */
