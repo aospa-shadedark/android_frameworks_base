@@ -25,6 +25,10 @@ import android.content.IntentFilter;
 import android.content.om.IOverlayManager;
 import android.content.pm.PackageManager;
 import android.content.res.ApkAssets;
+import android.database.ContentObserver;
+import android.net.Uri;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.PatternMatcher;
 import android.os.RemoteException;
 import android.os.ServiceManager;
@@ -96,6 +100,16 @@ public class NavigationModeController implements Dumpable {
         }
     };
 
+    // Observer for "Show IME Space" setting changes
+    private final ContentObserver mSettingsObserver = new ContentObserver(new Handler(Looper.getMainLooper())) {
+        @Override
+        public void onChange(boolean selfChange, Uri uri) {
+            if (DEBUG) {
+                Log.d(TAG, "SettingsObserver: onChange " + uri);
+            }
+            updateCurrentInteractionMode(true /* notify */);
+        }
+    };
 
     @Inject
     public NavigationModeController(Context context,
@@ -127,6 +141,13 @@ public class NavigationModeController implements Dumpable {
                 updateCurrentInteractionMode(true /* notify */);
             }
         });
+
+        // Register observer for navbar_ime_space
+        mContext.getContentResolver().registerContentObserver(
+                Settings.Secure.getUriFor(Settings.Secure.NAVBAR_IME_SPACE),
+                false,
+                mSettingsObserver,
+                UserHandle.USER_ALL);
 
         updateCurrentInteractionMode(false /* notify */);
     }
@@ -161,7 +182,12 @@ public class NavigationModeController implements Dumpable {
     }
 
     public boolean getImeDrawsImeNavBar() {
-        return mCurrentUserContext.getResources().getBoolean(
+        // Check if user wants to show IME space (default is 1/true)
+        boolean showImeSpace = Settings.Secure.getIntForUser(
+                mCurrentUserContext.getContentResolver(), Settings.Secure.NAVBAR_IME_SPACE, 1,
+                mCurrentUserContext.getUserId()) == 1;
+
+        return showImeSpace && mCurrentUserContext.getResources().getBoolean(
                 com.android.internal.R.bool.config_imeDrawsImeNavBar);
     }
 
@@ -198,6 +224,7 @@ public class NavigationModeController implements Dumpable {
     public void dump(PrintWriter pw, String[] args) {
         pw.println("NavigationModeController:");
         pw.println("  mode=" + getCurrentInteractionMode(mCurrentUserContext));
+        pw.println("  imeDrawsImeNavBar=" + getImeDrawsImeNavBar());
         String defaultOverlays = "";
         try {
             defaultOverlays = String.join(", ", mOverlayManager.getDefaultOverlayPackages());
