@@ -266,6 +266,7 @@ import com.android.internal.util.android.FontController;
 import com.android.internal.util.ArrayUtils;
 import com.android.internal.util.FastPrintWriter;
 import com.android.internal.util.Preconditions;
+import com.android.internal.util.custom.GameDeviceIdentitySpoof;
 import com.android.internal.util.function.pooled.PooledLambda;
 import com.android.org.conscrypt.TrustedCertificateStore;
 import com.android.server.am.BitmapDumpProto;
@@ -8068,6 +8069,11 @@ public final class ActivityThread extends ClientTransactionHandler
                                                 data.appInfo.packageName,
                                                 UserHandle.myUserId());
         VMRuntime.setProcessPackageName(data.appInfo.packageName);
+        // Apply a selected game device profile before application code and providers run.
+        if (data.appInfo.category == ApplicationInfo.CATEGORY_GAME) {
+            GameDeviceIdentitySpoof.apply(getSystemContext(), data.appInfo.packageName,
+                    UserHandle.myUserId());
+        }
         mDdmSyncStageUpdater.next(Stage.Named);
 
         // Pass data directory path to ART. This is used for caching information and
