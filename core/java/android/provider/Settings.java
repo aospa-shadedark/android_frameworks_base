@@ -12757,6 +12757,13 @@ public final class Settings {
         public static final String FETCHED_PIF = "fetched_pif";
 
         /**
+         * User selectable list of apps to spoof as Pixel (pipe-separated package names).
+         * @hide
+         */
+        @Readable
+        public static final String PIXEL_SPOOFING_APPS = "pixel_spoofing_apps";
+
+        /**
          * Keys we no longer back up under the current schema, but want to continue to
          * process when restoring historical backup datasets.
          *
