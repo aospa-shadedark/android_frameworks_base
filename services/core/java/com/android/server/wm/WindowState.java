@@ -2672,6 +2672,9 @@ class WindowState extends WindowContainer<WindowState> implements WindowManagerP
             }
             if (!isVisibleByPolicy()) {
                 mWinAnimator.hide(getPendingTransaction(), "checkPolicyVisibilityChange");
+                if (mSurfaceControl != null) {
+                    getPendingTransaction().hide(mSurfaceControl);
+                }
                 if (isFocused()) {
                     ProtoLog.i(WM_DEBUG_FOCUS_LIGHT,
                             "setAnimationLocked: setting mFocusMayChange true");
@@ -2940,6 +2943,9 @@ class WindowState extends WindowContainer<WindowState> implements WindowManagerP
         }
         setPolicyVisibilityFlag(LEGACY_POLICY_VISIBILITY);
         mLegacyPolicyVisibilityAfterAnim = true;
+        if (mSurfaceControl != null) {
+            getPendingTransaction().show(mSurfaceControl);
+        }
         if (doAnimation) {
             mWinAnimator.applyAnimationLocked(TRANSIT_ENTER, true);
         }
@@ -2986,6 +2992,9 @@ class WindowState extends WindowContainer<WindowState> implements WindowManagerP
                 ProtoLog.i(WM_DEBUG_FOCUS_LIGHT,
                         "WindowState.hideLw: setting mFocusMayChange true");
                 mWmService.mFocusMayChange = true;
+            }
+            if (mSurfaceControl != null) {
+                getPendingTransaction().hide(mSurfaceControl);
             }
         }
         if (requestAnim) {
