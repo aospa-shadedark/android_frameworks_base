@@ -1597,7 +1597,8 @@ public class AudioService extends IAudioService.Stub
         mPlaybackMonitor =
                 new PlaybackActivityMonitor(context, MAX_STREAM_VOLUME[AudioSystem.STREAM_ALARM],
                         device -> onMuteAwaitConnectionTimeout(device),
-                        stream -> isStreamMute(stream));
+                        stream -> isStreamMute(stream),
+                        this);
         mPlaybackMonitor.registerPlaybackCallback(mPlaybackActivityMonitor, true);
 
         mMediaFocusControl = new MediaFocusControl(mContext, mPlaybackMonitor);
@@ -1959,6 +1960,64 @@ public class AudioService extends IAudioService.Stub
     }
 
     /**
+     * Returns true if the top of the audio focus stack is held by a USAGE_VOICE_COMMUNICATION
+     * requester. Some VoIP apps (e.g. Discord, WhatsApp) never call
+     * setMode(MODE_IN_COMMUNICATION), so an active call cannot be detected via mMode alone;
+     * this catches that case via focus instead.
+     */
+    private boolean hasActiveVoiceCommunicationFocus() {
+        final List<AudioFocusInfo> focusStack = mMediaFocusControl.getFocusStack();
+        if (focusStack.isEmpty()) {
+            return false;
+        }
+        final AudioFocusInfo top = focusStack.get(focusStack.size() - 1);
+        return top.getAttributes() != null
+                && top.getAttributes().getUsage() == AudioAttributes.USAGE_VOICE_COMMUNICATION;
+    }
+
+    /**
+     * True if a voice call is active, either via the legacy audio mode (telephony) or via focus
+     * (VoIP apps that never set MODE_IN_COMMUNICATION).
+     */
+    private boolean isVoiceCallActive() {
+        return mMode.get() == AudioSystem.MODE_IN_COMMUNICATION
+                || hasActiveVoiceCommunicationFocus();
+    }
+
+    /** Package-private accessor used by PlaybackActivityMonitor. */
+    boolean isVoiceCallActiveInternal() {
+        return isVoiceCallActive();
+    }
+
+    /**
+     * Re-applies the current STREAM_VOICE_CALL volume to whichever device it is actually
+     * routed to. Used to recover from silence after a routing change, a focus abandon, or a
+     * concurrent player state change during an active telephony or VoIP call. This is the only
+     * place that should resolve the voice-call device and push its volume; callers outside
+     * AudioService (e.g. PlaybackActivityMonitor) must go through
+     * resyncVoiceCallVolumeInternal() rather than resolving the device themselves, since
+     * getDeviceForStream() is documented as internal to AudioService.
+     */
+    private void resyncVoiceCallVolume() {
+        final int stream = AudioSystem.STREAM_VOICE_CALL;
+        synchronized (mSettingsLock) {
+            final VolumeStreamState vss = mStreamStates.get(stream);
+            if (vss == null) {
+                return;
+            }
+            final int device = getDeviceForStream(stream);
+            if (device != AudioSystem.DEVICE_NONE) {
+                vss.applyDeviceVolume_syncVSS(device);
+            }
+        }
+    }
+
+    /** Package-private accessor used by PlaybackActivityMonitor. */
+    void resyncVoiceCallVolumeInternal() {
+        resyncVoiceCallVolume();
+    }
+
+    /**
      * called when handling MSG_ROUTING_UPDATED
      */
     void onRoutingUpdatedFromAudioThread() {
@@ -1971,6 +2030,13 @@ public class AudioService extends IAudioService.Stub
                 Log.d(TAG, "Clear volume cache after routing update");
             }
             AudioManager.clearVolumeCache(AudioManager.VOLUME_CACHING_API);
+        }
+
+        if (isVoiceCallActive()) {
+            if (DEBUG_MODE) {
+                Slog.d(TAG, "Refreshing VOICE_CALL stream after routing update");
+            }
+            resyncVoiceCallVolume();
         }
     }
 
