@@ -1976,6 +1976,19 @@ public class AudioService extends IAudioService.Stub
             }
             AudioManager.clearVolumeCache(AudioManager.VOLUME_CACHING_API);
         }
+
+        if (mMode.get() == AudioSystem.MODE_IN_COMMUNICATION) {
+            if (DEBUG_MODE) {
+                Slog.d(TAG, "Refreshing VOICE_CALL stream after routing update");
+            }
+            final int stream = AudioSystem.STREAM_VOICE_CALL;
+            // Force device-specific volume reapplication
+            synchronized (mSettingsLock) {
+                final VolumeStreamState vss = mStreamStates.get(stream);
+                final int device = getDeviceForStream(stream);
+                vss.applyDeviceVolume_syncVSS(device);
+            }
+        }
     }
 
     //-----------------------------------------------------------------
