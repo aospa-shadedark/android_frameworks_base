@@ -321,6 +321,31 @@ public final class GamesPropsUtils {
             return;
         }
 
+        Map<String, Map<String, Object>> allProps = new HashMap<>(propsToChange);
+        try {
+            final ContentResolver contentResolver = context.getContentResolver();
+            String customProfilesJson = Settings.Secure.getString(contentResolver, "neoteric_custom_spoof_profiles");
+            if (!TextUtils.isEmpty(customProfilesJson)) {
+                org.json.JSONArray jsonArray = new org.json.JSONArray(customProfilesJson);
+                for (int i = 0; i < jsonArray.length(); i++) {
+                    org.json.JSONObject obj = jsonArray.getJSONObject(i);
+                    String id = obj.getString("id");
+                    Map<String, Object> props = new HashMap<>();
+                    props.put("BRAND", obj.optString("brand", ""));
+                    props.put("MANUFACTURER", obj.optString("manufacturer", ""));
+                    props.put("DEVICE", obj.optString("device", ""));
+                    props.put("MODEL", obj.optString("model", ""));
+                    String fp = obj.optString("fingerprint", "");
+                    if (!TextUtils.isEmpty(fp)) props.put("FINGERPRINT", fp);
+                    String prod = obj.optString("product", "");
+                    if (!TextUtils.isEmpty(prod)) props.put("PRODUCT", prod);
+                    allProps.put(id, props);
+                }
+            }
+        } catch (Exception e) {
+            dlog("Failed to parse custom profiles: " + e.getMessage());
+        }
+
         String[] apps = spoofedApps.split(",");
         for (String app : apps) {
             String[] values = app.split(":");
@@ -330,9 +355,9 @@ public final class GamesPropsUtils {
             String pkg = values[0];
             String device = values[1];
             if (pkg.equals(packageName)) {
-                if (propsToChange.containsKey(device)) {
+                if (allProps.containsKey(device)) {
                     dlog("Defining props for: " + packageName + " as " + device);
-                    Map<String, Object> props = propsToChange.get(device);
+                    Map<String, Object> props = allProps.get(device);
                     for (Map.Entry<String, Object> prop : props.entrySet()) {
                         String key = prop.getKey();
                         Object value = prop.getValue();
