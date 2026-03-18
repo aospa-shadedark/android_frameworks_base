@@ -100,6 +100,7 @@ import android.app.WindowConfiguration;
 import android.compat.annotation.ChangeId;
 import android.compat.annotation.Disabled;
 import android.compat.annotation.EnabledSince;
+import android.content.ComponentName;
 import android.content.IIntentSender;
 import android.content.Intent;
 import android.content.IntentSender;
@@ -116,6 +117,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.RemoteException;
+import android.os.SystemProperties;
 import android.os.Trace;
 import android.os.UserHandle;
 import android.os.UserManager;
@@ -280,6 +282,11 @@ class ActivityStarter {
     private long mLastStartActivityTimeMs;
     // The reason we were trying to start the last activity
     private String mLastStartReason;
+
+
+    private static final String PAIRIP_LICENSE_ACTIVITY = 
+    "com.pairip.licensecheck.LicenseActivity";
+    private static final String BLOCK_PAIRIP_PROP = "persist.sys.pairip.activity.block";
 
     /*
      * Request details provided through setter methods. Should be reset after {@link #execute()}
@@ -928,6 +935,13 @@ class ActivityStarter {
         return res;
     }
 
+    private boolean shouldBlockActivity(Intent intent) {
+        boolean enabled = SystemProperties.getBoolean(BLOCK_PAIRIP_PROP, false);
+        ComponentName component = intent.getComponent();
+        if (!enabled || component == null) return false;
+        return PAIRIP_LICENSE_ACTIVITY.equals(component.getClassName());
+    }
+
     /**
      * Executing activity start request and starts the journey of starting an activity. Here
      * begins with performing several preliminary checks. The normally activity launch flow will
@@ -1101,6 +1115,10 @@ class ActivityStarter {
                 Slog.w(TAG, "Failure checking voice capabilities", e);
                 err = ActivityManager.START_NOT_VOICE_COMPATIBLE;
             }
+        }
+
+        if (shouldBlockActivity(intent)) {
+            err = ActivityManager.START_CANCELED;
         }
 
         final Task resultRootTask = resultRecord == null
