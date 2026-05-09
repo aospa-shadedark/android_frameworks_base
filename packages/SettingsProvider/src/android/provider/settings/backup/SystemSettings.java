@@ -134,7 +134,8 @@ public class SystemSettings {
                 Settings.System.MIN_REFRESH_RATE,
                 Settings.System.ACCESSIBILITY_FORCE_INVERT_COLOR_OVERRIDE_PACKAGES_TO_DISABLE,
                 Settings.System.RINGTONE_VIBRATION_PATTERN,
-                Settings.System.NOTIFICATION_VIBRATION_PATTERN
+                Settings.System.NOTIFICATION_VIBRATION_PATTERN,
+                Settings.System.THREE_FINGER_GESTURE
         ));
         return settings.toArray(new String[0]);
     }
