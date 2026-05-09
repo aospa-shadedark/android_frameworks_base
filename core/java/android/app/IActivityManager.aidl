@@ -1032,6 +1032,11 @@ interface IActivityManager {
             boolean enabled, int reason, in String subReason, int source, long threshold);
 
     /**
+     *  Should disable touch if three fingers to screen shot is active?
+     */
+    boolean isSwipeToScreenshotGestureActive();
+
+    /**
      * Creates and returns a new IntentCreatorToken that keeps the creatorUid and refreshes key
      * fields of the intent passed in.
      *
