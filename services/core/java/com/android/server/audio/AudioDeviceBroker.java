@@ -344,9 +344,12 @@ public class AudioDeviceBroker {
         if (AudioService.DEBUG_COMM_RTE) {
             Log.v(TAG, "setSpeakerphoneOn, on: " + on + " uid: " + attributionSource.getUid());
         }
-        postSetCommunicationDeviceForClient(new CommunicationDeviceInfo(cb, attributionSource,
-                new AudioDeviceAttributes(AudioSystem.DEVICE_OUT_SPEAKER, ""),
-                on, BtHelper.SCO_MODE_UNDEFINED, eventSource, isPrivileged));
+        synchronized (mCommunicationDeviceLock) {
+            mCommunicationDeviceUpdateCount++;
+            postSetCommunicationDeviceForClient(new CommunicationDeviceInfo(cb, attributionSource,
+                    new AudioDeviceAttributes(AudioSystem.DEVICE_OUT_SPEAKER, ""),
+                    on, BtHelper.SCO_MODE_UNDEFINED, eventSource, isPrivileged));
+        }
     }
 
     private static final long SET_COMMUNICATION_DEVICE_TIMEOUT_MS = 3000;
@@ -1445,9 +1448,12 @@ public class AudioDeviceBroker {
         if (AudioService.DEBUG_COMM_RTE) {
             Log.v(TAG, "startBluetoothScoForClient, uid: " + attributionSource.getUid());
         }
-        postSetCommunicationDeviceForClient(new CommunicationDeviceInfo(cb, attributionSource,
-                new AudioDeviceAttributes(AudioSystem.DEVICE_OUT_BLUETOOTH_SCO, ""),
-                true, scoAudioMode, eventSource, isPrivileged));
+        synchronized (mCommunicationDeviceLock) {
+            mCommunicationDeviceUpdateCount++;
+            postSetCommunicationDeviceForClient(new CommunicationDeviceInfo(cb, attributionSource,
+                    new AudioDeviceAttributes(AudioSystem.DEVICE_OUT_BLUETOOTH_SCO, ""),
+                    true, scoAudioMode, eventSource, isPrivileged));
+        }
     }
 
     /*package*/ void stopBluetoothScoForClient(IBinder cb,
@@ -1456,10 +1462,13 @@ public class AudioDeviceBroker {
         if (AudioService.DEBUG_COMM_RTE) {
             Log.v(TAG, "stopBluetoothScoForClient, uid: " + attributionSource.getUid());
         }
-        postSetCommunicationDeviceForClient(new CommunicationDeviceInfo(
-                cb, attributionSource, new AudioDeviceAttributes(
-                                              AudioSystem.DEVICE_OUT_BLUETOOTH_SCO, ""),
-                false, BtHelper.SCO_MODE_UNDEFINED, eventSource, isPrivileged));
+        synchronized (mCommunicationDeviceLock) {
+            mCommunicationDeviceUpdateCount++;
+            postSetCommunicationDeviceForClient(new CommunicationDeviceInfo(
+                    cb, attributionSource, new AudioDeviceAttributes(
+                                                  AudioSystem.DEVICE_OUT_BLUETOOTH_SCO, ""),
+                    false, BtHelper.SCO_MODE_UNDEFINED, eventSource, isPrivileged));
+        }
     }
 
     /*package*/ int setPreferredDevicesForStrategySync(int strategy,
