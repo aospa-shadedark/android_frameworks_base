@@ -149,6 +149,7 @@ public final class PlaybackActivityMonitor
     private final ConcurrentLinkedQueue<PlayMonitorClient> mClients = new ConcurrentLinkedQueue<>();
 
     private final Object mPlayerLock = new Object();
+    private final Object mDuckingLock = new Object();
     @GuardedBy("mPlayerLock")
     private final HashMap<Integer, AudioPlaybackConfiguration> mPlayers =
             new HashMap<Integer, AudioPlaybackConfiguration>();
@@ -409,7 +410,9 @@ public final class PlaybackActivityMonitor
             }
             if (change) {
                 if (event == AudioPlaybackConfiguration.PLAYER_STATE_STARTED) {
-                    mDuckingManager.checkDuck(apc);
+                    synchronized (mDuckingLock) {
+                        mDuckingManager.checkDuck(apc);
+                    }
                     mFadeOutManager.checkFade(apc);
                 }
                 if (doNotLog) {
@@ -818,45 +821,68 @@ public final class PlaybackActivityMonitor
             Log.v(TAG, String.format("duckPlayers: uids winner=%d loser=%d",
                     winner.getClientUid(), loser.getClientUid()));
         }
-        synchronized (mPlayerLock) {
-            if (mPlayers.isEmpty()) {
-                return true;
+        if (winner.getAudioAttributes().getUsage()
+                == AudioAttributes.USAGE_VOICE_COMMUNICATION) {
+            if (DEBUG) {
+                Log.v(TAG, "duckPlayers: skipping duck, winner is VoIP/communication");
             }
-            // check if this UID needs to be ducked (return false if not), and gather list of
-            // eligible players to duck
-            final Iterator<AudioPlaybackConfiguration> apcIterator = mPlayers.values().iterator();
+            return true;
+        }
+        synchronized (mDuckingLock) {
             final ArrayList<AudioPlaybackConfiguration> apcsToDuck =
                     new ArrayList<AudioPlaybackConfiguration>();
-            while (apcIterator.hasNext()) {
-                final AudioPlaybackConfiguration apc = apcIterator.next();
-                if (!winner.hasSameUid(apc.getClientUid())
-                        && loser.hasSameUid(apc.getClientUid())
-                        && apc.getPlayerState() == AudioPlaybackConfiguration.PLAYER_STATE_STARTED)
-                {
-                    if (!forceDuck && (apc.getAudioAttributes().getContentType() ==
-                            AudioAttributes.CONTENT_TYPE_SPEECH)) {
-                        // the player is speaking, ducking will make the speech unintelligible
-                        // so let the app handle it instead
-                        Log.v(TAG, "not ducking player " + apc.getPlayerInterfaceId()
-                                + " uid:" + apc.getClientUid() + " pid:" + apc.getClientPid()
-                                + " - SPEECH");
-                        return false;
-                    } else if (ArrayUtils.contains(UNDUCKABLE_PLAYER_TYPES, apc.getPlayerType())) {
-                        Log.v(TAG, "not ducking player " + apc.getPlayerInterfaceId()
-                                + " uid:" + apc.getClientUid() + " pid:" + apc.getClientPid()
-                                + " due to type:"
-                                + AudioPlaybackConfiguration.toLogFriendlyPlayerType(
-                                        apc.getPlayerType()));
-                        return false;
-                    }
-                    apcsToDuck.add(apc);
+            final boolean strongDuck;
+
+            synchronized (mPlayerLock) {
+                if (mPlayers.isEmpty()) {
+                    return true;
                 }
+                // check if this UID needs to be ducked (return false if not), and gather list of
+                // eligible players to duck
+                final Iterator<AudioPlaybackConfiguration> apcIterator =
+                        mPlayers.values().iterator();
+                while (apcIterator.hasNext()) {
+                    final AudioPlaybackConfiguration apc = apcIterator.next();
+                    if (!winner.hasSameUid(apc.getClientUid())
+                            && loser.hasSameUid(apc.getClientUid())
+                            && apc.getPlayerState()
+                                    == AudioPlaybackConfiguration.PLAYER_STATE_STARTED) {
+
+                        if (!forceDuck
+                                && (apc.getAudioAttributes().getContentType()
+                                        == AudioAttributes.CONTENT_TYPE_SPEECH)) {
+                            Log.v(TAG, "Skipping duck registration for tracking node: "
+                                    + apc.getPlayerInterfaceId()
+                                    + " uid:" + apc.getClientUid()
+                                    + " pid:" + apc.getClientPid()
+                                    + " - SPEECH");
+                            continue; 
+                        } else if (ArrayUtils.contains(
+                                UNDUCKABLE_PLAYER_TYPES,
+                                apc.getPlayerType())) {
+                            Log.v(TAG, "not ducking player "
+                                    + apc.getPlayerInterfaceId()
+                                    + " uid:" + apc.getClientUid()
+                                    + " pid:" + apc.getClientPid()
+                                    + " due to type:"
+                                    + AudioPlaybackConfiguration.toLogFriendlyPlayerType(
+                                            apc.getPlayerType()));
+                            continue;
+                        }
+                        apcsToDuck.add(apc);
+                    }
+                }
+
+                strongDuck = reqCausesStrongDuck(winner);
             }
-            // add the players eligible for ducking to the list, and duck them
-            // (if apcsToDuck is empty, this will at least mark this uid as ducked, so when
-            //  players of the same uid start, they will be ducked by DuckingManager.checkDuck())
-            mDuckingManager.duckUid(loser.getClientUid(), apcsToDuck, reqCausesStrongDuck(winner));
+
+            // Duck outside mPlayerLock to avoid lock contention / deadlocks
+            mDuckingManager.duckUid(
+                    loser.getClientUid(),
+                    apcsToDuck,
+                    strongDuck);
         }
+
         return true;
     }
 
