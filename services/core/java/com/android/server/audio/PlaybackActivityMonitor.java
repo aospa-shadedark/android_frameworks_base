@@ -158,6 +158,7 @@ public final class PlaybackActivityMonitor
     private final SparseIntArray mPiidToPortId = new SparseIntArray();
 
     private final Context mContext;
+    private final AudioService mAudioService;
     private int mSavedAlarmVolume = -1;
     private boolean mSavedAlarmMuted = false;
     private final Function<Integer, Boolean> mIsStreamMutedCb;
@@ -168,9 +169,11 @@ public final class PlaybackActivityMonitor
 
     PlaybackActivityMonitor(Context context, int maxAlarmVolume,
             Consumer<AudioDeviceAttributes> muteTimeoutCallback,
-            Function<Integer, Boolean> isStreamMutedCb) {
+            Function<Integer, Boolean> isStreamMutedCb,
+            AudioService audioService) {
         mContext = context;
         mMaxAlarmVolume = maxAlarmVolume;
+        mAudioService = audioService;
         PlayMonitorClient.sListenerDeathMonitor = this;
         AudioPlaybackConfiguration.sPlayerDeathMonitor = this;
         mMuteAwaitConnectionTimeoutCb = muteTimeoutCallback;
@@ -414,6 +417,12 @@ public final class PlaybackActivityMonitor
                         mDuckingManager.checkDuck(apc);
                     }
                     mFadeOutManager.checkFade(apc);
+                } else if (event == AudioPlaybackConfiguration.PLAYER_STATE_PAUSED
+                        || event == AudioPlaybackConfiguration.PLAYER_STATE_STOPPED
+                        || event == AudioPlaybackConfiguration.PLAYER_STATE_RELEASED) {
+                    if (mAudioService != null) {
+                        mAudioService.scheduleVoiceCallVolumeResync(event);
+                    }
                 }
                 if (doNotLog) {
                     // do not dispatch events for "ignored" players

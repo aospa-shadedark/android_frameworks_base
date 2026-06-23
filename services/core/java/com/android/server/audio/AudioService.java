@@ -486,6 +486,7 @@ public class AudioService extends IAudioService.Stub
     private static final int MSG_BROADCAST_MASTER_MUTE = 55;
     private static final int MSG_UPDATE_CONTEXTUAL_VOLUMES = 56;
     private static final int MSG_BT_COMM_DEVICE_ACTIVE_UPDATE = 57;
+    private static final int MSG_RESYNC_VOICE_CALL_VOLUME = 58;
 
     /**
      * Messages handled by the {@link SoundDoseHelper}, do not exceed
@@ -2015,6 +2016,21 @@ public class AudioService extends IAudioService.Stub
     /** Package-private accessor used by PlaybackActivityMonitor. */
     void resyncVoiceCallVolumeInternal() {
         resyncVoiceCallVolume();
+    }
+
+    void scheduleVoiceCallVolumeResync(int playerEvent) {
+        if (DEBUG_VOL) {
+            Log.i(TAG, "Scheduling voice-call volume resync after player event="
+                    + AudioPlaybackConfiguration.playerStateToString(playerEvent));
+        }
+
+        sendMsg(mAudioHandler,
+                MSG_RESYNC_VOICE_CALL_VOLUME,
+                SENDMSG_REPLACE,
+                0,
+                0,
+                null,
+                0);
     }
 
     /**
@@ -10876,6 +10892,12 @@ public class AudioService extends IAudioService.Stub
                     onUpdateBtCommDeviceActive(msg.arg1);
                     break;
 
+                case MSG_RESYNC_VOICE_CALL_VOLUME:
+                    if (isVoiceCallActiveInternal()) {
+                        resyncVoiceCallVolumeInternal();
+                    }
+                    break;
+
                 case MusicFxHelper.MSG_EFFECT_CLIENT_GONE:
                     mMusicFxHelper.handleMessage(msg);
                     break;
@@ -11613,7 +11635,14 @@ public class AudioService extends IAudioService.Stub
                 }
             }
         }
-        return mMediaFocusControl.abandonAudioFocus(fd, clientId, aa, callingPackageName);
+        final int result = mMediaFocusControl.abandonAudioFocus(fd, clientId, aa, callingPackageName);
+        if (isVoiceCallActive()) {
+            if (DEBUG_MODE) {
+                Slog.d(TAG, "Re-applying VOICE_CALL volume after focus abandon in communication mode");
+            }
+            resyncVoiceCallVolume();
+        }
+        return result;
     }
 
     /** synchronization between setMode(NORMAL) and abandonAudioFocus() from Telecom */
