@@ -12,12 +12,10 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License
-// QTI_BEGIN: 2025-03-13: Telephony: Introduce new values for Dual Video
  *
  * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
  * Copyright (c) 2025 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-// QTI_END: 2025-03-13: Telephony: Introduce new values for Dual Video
  */
 
 package android.telecom;
@@ -72,10 +70,8 @@ public class VideoProfile implements Parcelable {
             flag = true,
             prefix = { "STATE_" },
             value = {STATE_AUDIO_ONLY, STATE_TX_ENABLED, STATE_RX_ENABLED, STATE_BIDIRECTIONAL,
-// QTI_BEGIN: 2025-03-13: Telephony: Introduce new values for Dual Video
                     STATE_PAUSED, STATE_ALT_TX_ENABLED, STATE_ALT_RX_ENABLED,
                     STATE_ALT_BIDIRECTIONAL, STATE_DUAL_BIDIRECTIONAL})
-// QTI_END: 2025-03-13: Telephony: Introduce new values for Dual Video
     public @interface VideoState {}
 
     /**
@@ -128,7 +124,6 @@ public class VideoProfile implements Parcelable {
      */
     public static final int STATE_PAUSED = 0x4;
 
-// QTI_BEGIN: 2025-03-13: Telephony: Introduce new values for Dual Video
     /**
      * Video transmission is enabled for alternate stream
      * @hide
@@ -154,7 +149,6 @@ public class VideoProfile implements Parcelable {
     public static final int STATE_DUAL_BIDIRECTIONAL =
             STATE_BIDIRECTIONAL | STATE_ALT_BIDIRECTIONAL;
 
-// QTI_END: 2025-03-13: Telephony: Introduce new values for Dual Video
     private final int mVideoState;
 
     private final int mQuality;
@@ -288,12 +282,10 @@ public class VideoProfile implements Parcelable {
             if (isPaused(videoState)) {
                 sb.append(" Pause");
             }
-// QTI_BEGIN: 2025-03-13: Telephony: Introduce new values for Dual Video
 
             if (videoState == STATE_DUAL_BIDIRECTIONAL) {
                 sb.append(" Dual VT");
             }
-// QTI_END: 2025-03-13: Telephony: Introduce new values for Dual Video
         }
 
         return sb.toString();

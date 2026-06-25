@@ -121,9 +121,7 @@ class InternetTileDataInteractorTest : SysuiTestCase() {
                 testScope.backgroundScope,
                 context,
                 flags,
-// QTI_BEGIN: 2025-04-15: Android_UI: SystemUI: Readapt Mobile Icon Features For Kairos part 2
                 mock(),
-// QTI_END: 2025-04-15: Android_UI: SystemUI: Readapt Mobile Icon Features For Kairos part 2
             )
 
         context.orCreateTestableResources.apply {

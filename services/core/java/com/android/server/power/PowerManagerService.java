@@ -7644,7 +7644,6 @@ public final class PowerManagerService extends SystemService
         }
     }
 
-// QTI_BEGIN: 2025-04-22: Snapdragon_IoT/Wearables: Adding adpation for deepsleep and hibernate state.
     private void forceDisplaySleepInternal() {
         synchronized (mLock) {
             if (!SystemProperties.getBoolean("config.enable_qti_suspend_manager", false)) {
@@ -7676,7 +7675,6 @@ public final class PowerManagerService extends SystemService
        }
     }
 
-// QTI_END: 2025-04-22: Snapdragon_IoT/Wearables: Adding adpation for deepsleep and hibernate state.
     @VisibleForTesting
     final class LocalService extends PowerManagerInternal {
         @Override
@@ -7858,7 +7856,6 @@ public final class PowerManagerService extends SystemService
                 updateSettingsLocked();
             }
         }
-// QTI_BEGIN: 2025-04-22: Snapdragon_IoT/Wearables: Adding adpation for deepsleep and hibernate state.
 
         @Override
         public void forceDisplaySleep() {
@@ -7869,7 +7866,6 @@ public final class PowerManagerService extends SystemService
         public void wakeupFromForceDisplaySleep() {
             wakeupFromForceDisplaySleepInternal();
         }
-// QTI_END: 2025-04-22: Snapdragon_IoT/Wearables: Adding adpation for deepsleep and hibernate state.
     }
 
     /**

@@ -1167,7 +1167,6 @@ public class Process {
     public static final native void setProcessGroup(int pid, int group)
             throws IllegalArgumentException, SecurityException;
 
-// QTI_BEGIN: 2020-04-03: Performance: cgroup follow for procs in the same cgroup.procs
     /**
      * Sets the scheduling group for processes in the same cgroup.procs of uid and pid
      * @hide
@@ -1193,7 +1192,6 @@ public class Process {
     public static final native void setCgroupProcsProcessGroup(int uid, int pid, int group, boolean dex2oat_only)
             throws IllegalArgumentException, SecurityException;
 
-// QTI_END: 2020-04-03: Performance: cgroup follow for procs in the same cgroup.procs
     /**
      * Freeze or unfreeze the specified process.
      *
@@ -1826,4 +1824,23 @@ public class Process {
     * @hide
     */
     public static native boolean setPerfCoreAffinity(int tid, boolean enable);
+
+    /**
+     * Send SIGUSR2 to all processes that have registered a handler
+     * to trigger system-wide malloc cache purge.
+     *
+     * @hide
+     */
+    public static native void sendMallocPurgeSignalToAll();
+
+    /**
+     * Send SIGUSR2 to a specific process to trigger malloc cache purge.
+     * Returns true if the signal was sent successfully.
+     *
+     * @param pid The process ID to send the signal to.
+     * @return true if the signal was sent successfully, false otherwise.
+     *
+     * @hide
+     */
+    public static native boolean sendMallocPurgeSignalToPid(int pid);
 }

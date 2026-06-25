@@ -67,9 +67,7 @@ import android.os.SystemProperties;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 // QTI_END: 2021-02-01: Bluetooth: Add BC profile entry
-// QTI_BEGIN: 2021-04-22: Bluetooth: Access BC capabiltiy from BC profile
 import java.lang.reflect.Method;
-// QTI_END: 2021-04-22: Bluetooth: Access BC capabiltiy from BC profile
 
 
 /**
@@ -352,13 +350,11 @@ public class LocalBluetoothProfileManager {
         }
 
         public void onReceive(Context context, Intent intent, BluetoothDevice device) {
-// QTI_BEGIN: 2018-03-22: Bluetooth: Sync Preference in UI for new cached device
             if (device == null) {
                 Log.w(TAG, "StateChangedHandler receives state-change for invalid device");
                 return;
             }
 
-// QTI_END: 2018-03-22: Bluetooth: Sync Preference in UI for new cached device
             CachedBluetoothDevice cachedDevice = mDeviceManager.findDevice(device);
             if (cachedDevice == null) {
                 Log.w(TAG, "StateChangedHandler found new device: " + device);
@@ -712,7 +708,6 @@ public class LocalBluetoothProfileManager {
             removedProfiles.remove(mA2dpProfile);
         }
 /*
-// QTI_BEGIN: 2021-05-05: Bluetooth: Remove usage of adv audio mask property
         if (mHeadsetProfile != null) {
             if (ArrayUtils.contains(uuids, BluetoothUuid.ADVANCE_VOICE_P_UUID)
                    || ArrayUtils.contains(uuids, BluetoothUuid.ADVANCE_VOICE_T_UUID)
@@ -725,16 +720,10 @@ public class LocalBluetoothProfileManager {
                     if (DEBUG) Log.d(TAG, "Advance Audio Voice supported");
                 } else {
                     if (DEBUG) Log.d(TAG, "HeadsetProfile already added");
-// QTI_END: 2021-05-05: Bluetooth: Remove usage of adv audio mask property
-// QTI_BEGIN: 2021-01-17: Bluetooth: GAP Adv Audio: Adding new Advance Audio UUID's
                 }
             }
-// QTI_END: 2021-01-17: Bluetooth: GAP Adv Audio: Adding new Advance Audio UUID's
-// QTI_BEGIN: 2021-05-05: Bluetooth: Remove usage of adv audio mask property
         }
-// QTI_END: 2021-05-05: Bluetooth: Remove usage of adv audio mask property
 
-// QTI_BEGIN: 2021-05-05: Bluetooth: Remove usage of adv audio mask property
         if ((mA2dpProfile != null)
             && (ArrayUtils.contains(uuids, BluetoothUuid.ADVANCE_MEDIA_T_UUID)
                 || ArrayUtils.contains(uuids, BluetoothUuid.ADVANCE_HEARINGAID_UUID)
@@ -749,11 +738,8 @@ public class LocalBluetoothProfileManager {
                 if (DEBUG) Log.d(TAG, "Advance Audio Media supported");
             } else {
                 if (DEBUG) Log.d(TAG, "A2dpProfile already added");
-// QTI_END: 2021-05-05: Bluetooth: Remove usage of adv audio mask property
-// QTI_BEGIN: 2021-01-17: Bluetooth: GAP Adv Audio: Adding new Advance Audio UUID's
             }
         }
-// QTI_END: 2021-01-17: Bluetooth: GAP Adv Audio: Adding new Advance Audio UUID's
 */
         if (BluetoothUuid.containsAnyUuid(uuids, A2dpSinkProfile.SRC_UUIDS)
                 && mA2dpSinkProfile != null) {
@@ -793,10 +779,8 @@ public class LocalBluetoothProfileManager {
             mMapProfile.setEnabled(device, true);
         }
 
-// QTI_BEGIN: 2021-07-30: Bluetooth: Avoid removing PBAP in device details when remote supports it
         if ((mPbapProfile != null)
                 && BluetoothUuid.containsAnyUuid(uuids, PbapServerProfile.PBAB_CLIENT_UUIDS) ) {
-// QTI_END: 2021-07-30: Bluetooth: Avoid removing PBAP in device details when remote supports it
             profiles.add(mPbapProfile);
             removedProfiles.remove(mPbapProfile);
             mPbapProfile.setEnabled(device, true);
@@ -836,14 +820,12 @@ public class LocalBluetoothProfileManager {
             removedProfiles.remove(mCsipSetCoordinatorProfile);
         }
 
-// QTI_BEGIN: 2026-01-27: Bluetooth: HAP: Presets are shown in Settings app for LEhearing aid devices
         if (mHapClientProfile != null
                 && ArrayUtils.contains(uuids, BluetoothUuid.HAS)) {
            profiles.add(mHapClientProfile);
            removedProfiles.remove(mHapClientProfile);
         }
 
-// QTI_END: 2026-01-27: Bluetooth: HAP: Presets are shown in Settings app for LEhearing aid devices
         if (DEBUG) {
             Log.d(TAG,"New Profiles" + profiles.toString());
         }

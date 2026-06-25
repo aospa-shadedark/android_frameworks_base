@@ -22,9 +22,7 @@
 #include <utils/Log.h>
 #include <binder/IPCThreadState.h>
 #include <binder/IServiceManager.h>
-// QTI_BEGIN: 2018-04-19: Performance: Ensure cgroup.procs in the same cgroup
 #include <cutils/properties.h>
-// QTI_END: 2018-04-19: Performance: Ensure cgroup.procs in the same cgroup
 #include <utils/String8.h>
 #include <utils/Vector.h>
 #include <meminfo/procmeminfo.h>
@@ -67,6 +65,7 @@
 #include <unistd.h>
 #include <sched.h>
 #include <mutex>
+#include <malloc.h>
 
 #define GUARD_THREAD_PRIORITY 0
 
@@ -224,7 +223,6 @@ void android_os_Process_setThreadGroup(JNIEnv* env, jobject clazz, int tid, jint
     if (res != NO_ERROR) {
         signalExceptionForGroupError(env, -res, tid);
     }
-// QTI_BEGIN: 2018-08-21: Audio: Process: Use audio-app cpuset if available
 
     if ((grp == SP_AUDIO_APP) || (grp == SP_AUDIO_SYS)) {
         res = set_cpuset_policy(tid, sp);
@@ -232,7 +230,6 @@ void android_os_Process_setThreadGroup(JNIEnv* env, jobject clazz, int tid, jint
             signalExceptionForGroupError(env, -res, tid);
         }
     }
-// QTI_END: 2018-08-21: Audio: Process: Use audio-app cpuset if available
 }
 
 void android_os_Process_setThreadGroupAndCpuset(JNIEnv* env, jobject clazz, int tid, jint grp)
@@ -326,18 +323,13 @@ void android_os_Process_setProcessGroup(JNIEnv* env, jobject clazz, int pid, jin
         signalExceptionForGroupError(env, errno ? errno : EPERM, pid);
 }
 
-// QTI_BEGIN: 2020-04-03: Performance: cgroup follow for procs in the same cgroup.procs
+// QTI_BEGIN: 2020-04-03: Core: cgroup follow for procs in the same cgroup.procs
 void android_os_Process_setCgroupProcsProcessGroup(JNIEnv* env, jobject clazz, int uid, int pid, jint grp, jboolean dex2oat_only)
-// QTI_END: 2020-04-03: Performance: cgroup follow for procs in the same cgroup.procs
-// QTI_BEGIN: 2018-04-19: Performance: Ensure cgroup.procs in the same cgroup
+// QTI_END: 2020-04-03: Core: cgroup follow for procs in the same cgroup.procs
 {
     int fd;
-// QTI_END: 2018-04-19: Performance: Ensure cgroup.procs in the same cgroup
-// QTI_BEGIN: 2021-05-20: Performance: add support read cgroup.procs from cgroup V2 path
     char pathV1[255], pathV2[255];
     static bool isCgroupV2 = false;
-// QTI_END: 2021-05-20: Performance: add support read cgroup.procs from cgroup V2 path
-// QTI_BEGIN: 2018-04-19: Performance: Ensure cgroup.procs in the same cgroup
     if ((grp == SP_FOREGROUND) || (grp > SP_MAX)) {
         signalExceptionForGroupError(env, EINVAL, pid);
         return;
@@ -347,8 +339,6 @@ void android_os_Process_setCgroupProcsProcessGroup(JNIEnv* env, jobject clazz, i
     android_os_Process_setProcessGroup(env, clazz, pid, grp);
 
     //find processes in the same cgroup.procs of current uid and pid
-// QTI_END: 2018-04-19: Performance: Ensure cgroup.procs in the same cgroup
-// QTI_BEGIN: 2021-05-20: Performance: add support read cgroup.procs from cgroup V2 path
     snprintf(pathV1, sizeof(pathV1), "/acct/uid_%d/pid_%d/cgroup.procs", uid, pid);
     snprintf(pathV2, sizeof(pathV2), "/sys/fs/cgroup/uid_%d/pid_%d/cgroup.procs", uid, pid);
     if (isCgroupV2) {
@@ -364,63 +354,49 @@ void android_os_Process_setCgroupProcsProcessGroup(JNIEnv* env, jobject clazz, i
             }
         }
     }
-// QTI_END: 2021-05-20: Performance: add support read cgroup.procs from cgroup V2 path
-// QTI_BEGIN: 2018-04-19: Performance: Ensure cgroup.procs in the same cgroup
     if (fd >= 0) {
-// QTI_END: 2018-04-19: Performance: Ensure cgroup.procs in the same cgroup
-// QTI_BEGIN: 2020-04-03: Performance: cgroup follow for procs in the same cgroup.procs
+// QTI_BEGIN: 2020-04-03: Core: cgroup follow for procs in the same cgroup.procs
         char buffer[256];
-// QTI_END: 2020-04-03: Performance: cgroup follow for procs in the same cgroup.procs
-// QTI_BEGIN: 2018-04-19: Performance: Ensure cgroup.procs in the same cgroup
+// QTI_END: 2020-04-03: Core: cgroup follow for procs in the same cgroup.procs
         char ch;
         int numRead;
         size_t len=0;
         for (;;) {
             numRead=read(fd, &ch, 1);
-// QTI_END: 2018-04-19: Performance: Ensure cgroup.procs in the same cgroup
-// QTI_BEGIN: 2020-04-03: Performance: cgroup follow for procs in the same cgroup.procs
+// QTI_BEGIN: 2020-04-03: Core: cgroup follow for procs in the same cgroup.procs
             if (numRead <= 0)
                 break;
-// QTI_END: 2020-04-03: Performance: cgroup follow for procs in the same cgroup.procs
-// QTI_BEGIN: 2018-04-19: Performance: Ensure cgroup.procs in the same cgroup
+// QTI_END: 2020-04-03: Core: cgroup follow for procs in the same cgroup.procs
             if (ch != '\n') {
-// QTI_END: 2018-04-19: Performance: Ensure cgroup.procs in the same cgroup
-// QTI_BEGIN: 2020-04-03: Performance: cgroup follow for procs in the same cgroup.procs
+// QTI_BEGIN: 2020-04-03: Core: cgroup follow for procs in the same cgroup.procs
                 buffer[len++] = ch;
-// QTI_END: 2020-04-03: Performance: cgroup follow for procs in the same cgroup.procs
-// QTI_BEGIN: 2018-04-19: Performance: Ensure cgroup.procs in the same cgroup
+// QTI_END: 2020-04-03: Core: cgroup follow for procs in the same cgroup.procs
             } else {
                 int temp_pid = atoi(buffer);
                 len=0;
-// QTI_END: 2018-04-19: Performance: Ensure cgroup.procs in the same cgroup
-// QTI_BEGIN: 2020-04-03: Performance: cgroup follow for procs in the same cgroup.procs
+// QTI_BEGIN: 2020-04-03: Core: cgroup follow for procs in the same cgroup.procs
                 if (temp_pid == pid)
                     continue;
                 if (dex2oat_only) {
                     // check if cmdline of temp_pid is dex2oat
                     char cmdline[64];
-// QTI_END: 2020-04-03: Performance: cgroup follow for procs in the same cgroup.procs
-// QTI_BEGIN: 2018-04-19: Performance: Ensure cgroup.procs in the same cgroup
+// QTI_END: 2020-04-03: Core: cgroup follow for procs in the same cgroup.procs
                     snprintf(cmdline, sizeof(cmdline), "/proc/%d/cmdline", temp_pid);
                     int cmdline_fd = open(cmdline, O_RDONLY);
                     if (cmdline_fd >= 0) {
-// QTI_END: 2018-04-19: Performance: Ensure cgroup.procs in the same cgroup
-// QTI_BEGIN: 2020-04-03: Performance: cgroup follow for procs in the same cgroup.procs
+// QTI_BEGIN: 2020-04-03: Core: cgroup follow for procs in the same cgroup.procs
                         size_t read_size = read(cmdline_fd, buffer, 255);
-// QTI_END: 2020-04-03: Performance: cgroup follow for procs in the same cgroup.procs
-// QTI_BEGIN: 2018-04-19: Performance: Ensure cgroup.procs in the same cgroup
+// QTI_END: 2020-04-03: Core: cgroup follow for procs in the same cgroup.procs
                         close(cmdline_fd);
                         buffer[read_size]='\0';
-// QTI_END: 2018-04-19: Performance: Ensure cgroup.procs in the same cgroup
-// QTI_BEGIN: 2020-04-03: Performance: cgroup follow for procs in the same cgroup.procs
+// QTI_BEGIN: 2020-04-03: Core: cgroup follow for procs in the same cgroup.procs
                         const char *dex2oat_name1 = "dex2oat"; //for plugins compiler
                         const char *dex2oat_name2 = "/system/bin/dex2oat"; //for installer
                         const char *dex2oat_name3 = "/apex/com.android.runtime/bin/dex2oat"; //for installer
                         if (strncmp(buffer, dex2oat_name1, strlen(dex2oat_name1)) != 0
                                 && strncmp(buffer, dex2oat_name2, strlen(dex2oat_name2)) != 0
                                 && strncmp(buffer, dex2oat_name3, strlen(dex2oat_name3)) != 0) {
-// QTI_END: 2020-04-03: Performance: cgroup follow for procs in the same cgroup.procs
-// QTI_BEGIN: 2018-04-19: Performance: Ensure cgroup.procs in the same cgroup
+// QTI_END: 2020-04-03: Core: cgroup follow for procs in the same cgroup.procs
                             continue;
                         }
                     } else {
@@ -436,18 +412,17 @@ void android_os_Process_setCgroupProcsProcessGroup(JNIEnv* env, jobject clazz, i
     }
 }
 
-// QTI_END: 2018-04-19: Performance: Ensure cgroup.procs in the same cgroup
-// QTI_BEGIN: 2020-04-03: Performance: cgroup follow for procs in the same cgroup.procs
+// QTI_BEGIN: 2020-04-03: Core: cgroup follow for procs in the same cgroup.procs
 void android_os_Process_setProcessFrozen(
         JNIEnv *env, jobject clazz, jint pid, jint uid, jboolean freeze)
 {
-// QTI_END: 2020-04-03: Performance: cgroup follow for procs in the same cgroup.procs
+// QTI_END: 2020-04-03: Core: cgroup follow for procs in the same cgroup.procs
     if (uid < 0) {
         jniThrowExceptionFmt(env, "java/lang/IllegalArgumentException", "uid is negative: %d", uid);
         return;
     }
 
-// QTI_BEGIN: 2020-04-03: Performance: cgroup follow for procs in the same cgroup.procs
+// QTI_BEGIN: 2020-04-03: Core: cgroup follow for procs in the same cgroup.procs
     bool success = true;
 
     if (freeze) {
@@ -461,7 +436,7 @@ void android_os_Process_setProcessFrozen(
     }
 }
 
-// QTI_END: 2020-04-03: Performance: cgroup follow for procs in the same cgroup.procs
+// QTI_END: 2020-04-03: Core: cgroup follow for procs in the same cgroup.procs
 jint android_os_Process_getProcessGroup(JNIEnv* env, jobject clazz, jint pid)
 {
     SchedPolicy sp;
@@ -531,9 +506,7 @@ static void get_cpuset_cores_for_policy(SchedPolicy policy, cpu_set_t *cpu_set)
             if (!CgroupGetAttributePath("HighCapacityCPUs", &filename)) {
                 return;
             }
-// QTI_BEGIN: 2018-08-21: Audio: Process: Use audio-app cpuset if available
             break;
-// QTI_END: 2018-08-21: Audio: Process: Use audio-app cpuset if available
         case SP_AUDIO_APP:
         case SP_AUDIO_SYS:
             if (!CgroupGetAttributePath("AudioAppCapacityCPUs", &filename)) {
@@ -543,10 +516,8 @@ static void get_cpuset_cores_for_policy(SchedPolicy policy, cpu_set_t *cpu_set)
                 if (!CgroupGetAttributePath("HighCapacityCPUs", &filename)) {
                     return;
                 }
-// QTI_BEGIN: 2018-08-21: Audio: Process: Use audio-app cpuset if available
             }
             break;
-// QTI_END: 2018-08-21: Audio: Process: Use audio-app cpuset if available
         case SP_RT_APP:
             if (!CgroupGetAttributePath("HighCapacityCPUs", &filename)) {
                 return;
@@ -1617,6 +1588,90 @@ jboolean android_os_Process_setPerfCoreAffinity(
     return JNI_TRUE;
 }
 
+static void malloc_purge_on_sigusr2(int) {
+    mallopt(M_DECAY_TIME, 0);
+    mallopt(M_PURGE_ALL, 0);
+    mallopt(M_DECAY_TIME, 1);
+}
+
+// Bit mask for SIGUSR2 in the SigCgt field of /proc/<pid>/status.
+// SigCgt is a 64-bit hex bitmask; bit N-1 corresponds to signal N.
+static constexpr unsigned long long kSigUsr2Bit = 1ULL << (SIGUSR2 - 1);
+
+static bool hasMallocPurgeHandler(int pid) {
+    char path[PATH_MAX];
+
+    int n = snprintf(path, sizeof(path), "/proc/%d/status", pid);
+    if (n < 0 || static_cast<size_t>(n) >= sizeof(path)) {
+        ALOGW("hasMallocPurgeHandler: path truncated for pid=%d", pid);
+        return false;
+    }
+
+    FILE* f = fopen(path, "re");
+    if (!f) {
+        return false;
+    }
+
+    bool has_handler = false;
+    char line[256];
+    while (fgets(line, sizeof(line), f)) {
+        unsigned long long sigcgt = 0;
+        if (sscanf(line, "SigCgt: %llx", &sigcgt) == 1) {
+            has_handler = (sigcgt & kSigUsr2Bit) != 0;
+            break;
+        }
+    }
+    fclose(f);
+    return has_handler;
+}
+
+static bool sendMallocPurgeSignalToPid(int pid) {
+    if (pid <= 0) return false;
+
+    if (!hasMallocPurgeHandler(pid)) {
+        return false;
+    }
+
+    if (kill(pid, SIGUSR2) != 0) {
+        ALOGW("sendMallocPurgeSignalToPid: failed to send SIGUSR2 "
+                "to pid=%d: %s", pid, strerror(errno));
+        return false;
+    }
+    return true;
+}
+
+static jboolean android_os_Process_sendMallocPurgeSignalToPid(
+        JNIEnv* /*env*/, jobject /*clazz*/, jint pid) {
+    return sendMallocPurgeSignalToPid(static_cast<int>(pid))
+           ? JNI_TRUE : JNI_FALSE;
+}
+
+static void android_os_Process_sendMallocPurgeSignalToAll(JNIEnv* /*env*/,
+                                                           jobject /*clazz*/) {
+    std::unique_ptr<DIR, decltype(&closedir)> proc(opendir("/proc"), closedir);
+    if (!proc) {
+        ALOGE("sendMallocPurgeSignalToAll: failed to open /proc: %s",
+              strerror(errno));
+        return;
+    }
+
+    const int self_pid = getpid();
+    int count = 0;
+    struct dirent* entry;
+
+    while ((entry = readdir(proc.get())) != nullptr) {
+        int pid = atoi(entry->d_name);
+        if (pid <= 0 || pid == self_pid) {
+            continue;
+        }
+
+        if (sendMallocPurgeSignalToPid(pid)) {
+            ++count;
+        }
+    }
+
+    ALOGI("sendMallocPurgeSignalToAll: sent SIGUSR2 to %d processes", count);
+}
 
 static const JNINativeMethod methods[] = {
         {"getUidForName", "(Ljava/lang/String;)I", (void*)android_os_Process_getUidForName},
@@ -1630,9 +1685,9 @@ static const JNINativeMethod methods[] = {
         {"setThreadGroup", "(II)V", (void*)android_os_Process_setThreadGroup},
         {"setThreadGroupAndCpuset", "(II)V", (void*)android_os_Process_setThreadGroupAndCpuset},
         {"setProcessGroup", "(II)V", (void*)android_os_Process_setProcessGroup},
-// QTI_BEGIN: 2020-04-03: Performance: cgroup follow for procs in the same cgroup.procs
+// QTI_BEGIN: 2020-04-03: Core: cgroup follow for procs in the same cgroup.procs
         {"setCgroupProcsProcessGroup", "(IIIZ)V", (void*)android_os_Process_setCgroupProcsProcessGroup},
-// QTI_END: 2020-04-03: Performance: cgroup follow for procs in the same cgroup.procs
+// QTI_END: 2020-04-03: Core: cgroup follow for procs in the same cgroup.procs
         {"getProcessGroup", "(I)I", (void*)android_os_Process_getProcessGroup},
         {"createProcessGroup", "(II)I", (void*)android_os_Process_createProcessGroup},
         {"getExclusiveCores", "()[I", (void*)android_os_Process_getExclusiveCores},
@@ -1667,9 +1722,20 @@ static const JNINativeMethod methods[] = {
         {"nativePidFdOpen", "(II)I", (void*)android_os_Process_nativePidFdOpen},
         {"freezeCgroupUid", "(IZ)V", (void*)android_os_Process_freezeCgroupUID},
         {"setPerfCoreAffinity", "(IZ)Z", (void*)android_os_Process_setPerfCoreAffinity},
+        {"sendMallocPurgeSignalToAll", "()V", (void*)android_os_Process_sendMallocPurgeSignalToAll},
+        {"sendMallocPurgeSignalToPid", "(I)Z", (void*)android_os_Process_sendMallocPurgeSignalToPid},
 };
 
 int register_android_os_Process(JNIEnv* env)
 {
+    struct sigaction sa = {};
+    sa.sa_handler = malloc_purge_on_sigusr2;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = SA_RESTART;
+    if (sigaction(SIGUSR2, &sa, nullptr) != 0) {
+        ALOGW("register_android_os_Process: "
+              "failed to register SIGUSR2 handler: %s", strerror(errno));
+    }
+
     return RegisterMethodsOrDie(env, "android/os/Process", methods, NELEM(methods));
 }
