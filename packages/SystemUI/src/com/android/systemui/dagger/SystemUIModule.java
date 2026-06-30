@@ -118,7 +118,6 @@ import com.android.systemui.qs.tiles.impl.qr.ui.model.QRCodeScannerModule;
 import com.android.systemui.recents.Recents;
 import com.android.systemui.recordissue.RecordIssueModule;
 import com.android.systemui.res.R;
-import com.android.systemui.retail.RetailModeModule;
 import com.android.systemui.rotation.impl.RotationModule;
 import com.android.systemui.scene.shared.model.SceneContainerConfig;
 import com.android.systemui.scene.shared.model.SceneDataSource;
@@ -561,8 +560,8 @@ public abstract class SystemUIModule {
     }
     @Provides
     @SysUISingleton
-    static BcSmartspaceConfigProvider provideBcSmartspaceConfigPlugin(FeatureFlags featureFlags) {
-        return new BcSmartspaceConfigProvider(featureFlags);
+    static BcSmartspaceConfigProvider provideBcSmartspaceConfigPlugin() {
+        return new BcSmartspaceConfigProvider();
     }
     @Provides
     @SysUISingleton
