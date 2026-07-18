@@ -14381,6 +14381,12 @@ public final class Settings {
         public static final String ADAPTIVE_CHARGING_ENABLED = "adaptive_charging_enabled";
 
         /**
+         * Whether to show the auto-brightness button in Quick Settings.
+         * @hide
+         */
+        public static final String QS_SHOW_AUTO_BRIGHTNESS = "qs_show_auto_brightness";
+
+        /**
          * Whether battery saver is currently set to different schedule mode.
          *
          * @hide
