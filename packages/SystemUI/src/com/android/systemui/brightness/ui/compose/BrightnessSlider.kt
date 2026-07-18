@@ -143,6 +143,7 @@ fun BrightnessSlider(
     hapticsViewModelFactory: SliderHapticsViewModel.Factory,
     dimensions: BrightnessSliderDimensions = BrightnessSliderDimensions.Default,
     roundedSlider: Boolean = false,
+    showAutoBrightnessButton: Boolean = true,
 ) {
     var value by remember(gammaValue) { mutableIntStateOf(gammaValue) }
     val animatedValue by
@@ -215,7 +216,6 @@ fun BrightnessSlider(
     val hasAutoBrightness = context.resources.getBoolean(
         com.android.internal.R.bool.config_automatic_brightness_available
     )
-
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
@@ -396,7 +396,7 @@ fun BrightnessSlider(
             },
         )
 
-        if (hasAutoBrightness) {
+        if (hasAutoBrightness && showAutoBrightnessButton) {
             if (roundedSlider) {
                 Spacer(Modifier.width(8.dp))
             }
@@ -496,6 +496,7 @@ fun BrightnessSliderContainer(
     containerColors: ContainerColors,
     roundedSlider: Boolean = false,
     dimensions: BrightnessSliderDimensions = BrightnessSliderDimensions.Default,
+    showAutoBrightnessButton: Boolean = true,
 ) {
     val gamma = viewModel.currentBrightness.value
     if (gamma == BrightnessSliderViewModel.initialValue.value) { // Ignore initial negative value.
@@ -602,6 +603,7 @@ fun BrightnessSliderContainer(
             },
             dimensions = dimensions,
             roundedSlider = roundedSlider,
+            showAutoBrightnessButton = showAutoBrightnessButton,
         )
     }
 }
