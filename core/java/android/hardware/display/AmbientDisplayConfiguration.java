@@ -53,7 +53,7 @@ public class AmbientDisplayConfiguration {
     private final boolean mTapGestureEnabledByDefault;
     private final boolean mDoubleTapGestureEnabledByDefault;
 
-    /** {@hide} */
+    /** @hide */
     public static final String DOZE_NO_PROXIMITY_CHECK = "NoProximityCheck";
 
     /** Copied from android.provider.Settings.Secure since these keys are hidden. */

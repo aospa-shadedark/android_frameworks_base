@@ -380,7 +380,7 @@ public class KeyHandler {
 
     private void ensureTelecomManager() {
         if (mTelecomManager == null) {
-            mTelecomManager = TelecomManager.from(mContext);
+            mTelecomManager = (TelecomManager) mContext.getSystemService(Context.TELECOM_SERVICE);
         }
     }
 
