@@ -5087,4 +5087,9 @@
     <!-- Accessibility label for the thumbs down button on attribution dialog. [CHAR_LIMIT=NONE] -->
     <string name="ace_attribution_thumbs_down_button_accessibility_description">Thumbs down feedback button</string>
 
+    <!-- Wi-Fi hotspot data limit notifications -->
+    <string name="hotspot_data_limit_channel_name">Hotspot data limit</string>
+    <string name="hotspot_data_limit_notification_title">Hotspot data limit reached</string>
+    <string name="hotspot_data_limit_notification_text_off">Your data limit was reached. Hotspot has been turned off.</string>
+    <string name="hotspot_data_limit_notification_text">Your data limit was reached.</string>
 </resources>

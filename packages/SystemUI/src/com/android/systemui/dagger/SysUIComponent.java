@@ -29,6 +29,7 @@ import com.android.systemui.dagger.qualifiers.Background;
 import com.android.systemui.dagger.qualifiers.Main;
 import com.android.systemui.dagger.qualifiers.PerUser;
 import com.android.systemui.dump.DumpManager;
+import com.android.systemui.hotspot.HotspotDataLimitModule;
 import com.android.systemui.keyguard.KeyguardSliceProvider;
 import com.android.systemui.people.PeopleProvider;
 import com.android.systemui.settings.MultiUserUtilsModule;
@@ -78,6 +79,7 @@ import javax.inject.Provider;
 @Subcomponent(modules = {
         DefaultComponentBinder.class,
         DependencyProvider.class,
+        HotspotDataLimitModule.class,
         MultiUserUtilsModule.class,
         NotificationInsetsModule.class,
         QsFrameTranslateModule.class,
