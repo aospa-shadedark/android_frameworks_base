@@ -215,6 +215,8 @@ public class BoostFramework {
     //perf opcodes
     public static final int MPCTLV3_GPU_IS_APP_FG = 0X42820000;
     public static final int MPCTLV3_GPU_IS_APP_BG = 0X42824000;
+    public static final int MPCTLV3_THP_DEFRAG = 0x42C88000;
+    public static final int MPCTLV3_VM_COMPACTION_PROACTIVENESS = 0x42C8C000;
 
     public static final int VENDOR_EVENT_ACTIVITY_WINDOW_MODE_UPDATE = 0x00001066;
     public static final int VENDOR_EVENT_KILL_ABNORMAL = 0x00001068;
