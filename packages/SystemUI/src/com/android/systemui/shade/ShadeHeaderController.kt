@@ -160,6 +160,7 @@ constructor(
     private lateinit var iconManager: TintedIconManager
     private lateinit var carrierIconSlots: List<String>
     private lateinit var mShadeCarrierGroupController: ShadeCarrierGroupController
+    private lateinit var variableDateViewController: VariableDateViewController
 
     private val clock: Clock = header.requireViewById(R.id.clock)
     private val date: TextView = header.requireViewById(R.id.date)
@@ -339,6 +340,10 @@ constructor(
             override fun onUiModeChanged() {
                 updateColors()
             }
+
+            override fun onLocaleListChanged() {
+                variableDateViewController.onLocaleListChanged()
+            }
         }
 
     private val nextAlarmCallback =
@@ -347,7 +352,9 @@ constructor(
         }
 
     override fun onInit() {
-        variableDateViewControllerFactory.create(date as VariableDateView).init()
+        variableDateViewController =
+            variableDateViewControllerFactory.create(date as VariableDateView)
+        variableDateViewController.init()
 
         val fgColor = getFgColor()
         val bgColor = getBgColor()
