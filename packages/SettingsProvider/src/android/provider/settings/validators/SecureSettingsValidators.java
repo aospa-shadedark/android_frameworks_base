@@ -562,5 +562,7 @@ public class SecureSettingsValidators {
         VALIDATORS.put(Secure.DISPLAY_COLOR_SATURATION, new InclusiveIntegerRangeValidator(0, 200));
         VALIDATORS.put(Secure.HIDE_DEVELOPER_STATUS, ANY_STRING_VALIDATOR);
         VALIDATORS.put(Secure.KEYBOX_DATA, ANY_STRING_VALIDATOR);
+        VALIDATORS.put(Secure.CERTIFIED_PROPS_DATA, ANY_STRING_VALIDATOR);
+        VALIDATORS.put(Secure.SPOOF_PROPS, BOOLEAN_VALIDATOR);
     }
 }
