@@ -39,6 +39,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
+import sun.misc.Unsafe;
+
 /**
  * @hide
  */
@@ -71,6 +73,25 @@ public class PropImitationHooks {
 
     private static volatile String sProcessName;
     private static volatile boolean sIsGms, sIsFinsky, sIsPhotos, sPhotosSpoofEnabled = true;
+
+    private static final Unsafe UNSAFE;
+    private static final Field OFFSET_FIELD;
+    static {
+        Unsafe unsafe = null;
+        Field offsetField = null;
+        try {
+            Field f = Unsafe.class.getDeclaredField("theUnsafe");
+            f.setAccessible(true);
+            unsafe = (Unsafe) f.get(null);
+            f.setAccessible(false);
+            offsetField = Field.class.getDeclaredField("offset");
+            offsetField.setAccessible(true);
+        } catch (Throwable t) {
+            Log.e(TAG, "Unable to initialize Unsafe, will fall back to reflection", t);
+        }
+        UNSAFE = unsafe;
+        OFFSET_FIELD = offsetField;
+    }
 
     public static void setProps(Context context) {
         final String packageName = context.getPackageName();
@@ -109,15 +130,32 @@ public class PropImitationHooks {
     private static void setPropValue(String key, String value) {
         try {
             dlog("Setting prop " + key + " to " + value);
-            Class clazz = Build.class;
+            Class<?> clazz = Build.class;
+            String fieldName = key;
             if (key.startsWith("VERSION.")) {
                 clazz = Build.VERSION.class;
-                key = key.substring(8);
+                fieldName = key.substring(8);
             }
-            Field field = clazz.getDeclaredField(key);
+            Field field = clazz.getDeclaredField(fieldName);
             field.setAccessible(true);
-            // Cast the value to int if it's an integer field, otherwise string.
-            field.set(null, field.getType().equals(Integer.TYPE) ? Integer.parseInt(value) : value);
+            Object coerced = field.getType().equals(Integer.TYPE)
+                    ? Integer.valueOf(Integer.parseInt(value)) : value;
+            if (UNSAFE != null && OFFSET_FIELD != null) {
+                try {
+                    int offset = OFFSET_FIELD.getInt(field);
+                    if (field.getType().equals(Integer.TYPE)) {
+                        UNSAFE.putInt(field.getDeclaringClass(), offset, (Integer) coerced);
+                    } else {
+                        UNSAFE.putObject(field.getDeclaringClass(), offset, coerced);
+                    }
+                    field.setAccessible(false);
+                    dlog("Set prop " + key + " via Unsafe");
+                    return;
+                } catch (Throwable t) {
+                    dlog("Unsafe set failed for " + key + ", falling back: " + t.getMessage());
+                }
+            }
+            field.set(null, coerced);
             field.setAccessible(false);
         } catch (Exception e) {
             Log.e(TAG, "Failed to set prop " + key, e);
