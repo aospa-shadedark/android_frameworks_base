@@ -730,7 +730,7 @@ public class CentralSurfacesImpl implements CoreStartable, CentralSurfaces {
         mActivityIntentHelper = new ActivityIntentHelper(mContext);
         mActivityTransitionAnimator = activityTransitionAnimator;
 
-        mGameSpaceManager = new GameSpaceManager(mContext, mKeyguardStateController);
+        mGameSpaceManager = new GameSpaceManager(mContext, mKeyguardStateController, mUserTracker);
 
         // TODO(b/190746471): Find a better home for this.
         DateTimeView.setReceiverHandler(timeTickHandler);

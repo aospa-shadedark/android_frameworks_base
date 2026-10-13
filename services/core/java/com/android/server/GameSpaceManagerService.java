@@ -16,6 +16,7 @@
  */
 package com.android.server;
 
+import android.app.ActivityManager;
 import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
 import android.content.Context;
@@ -43,6 +44,11 @@ public class GameSpaceManagerService extends SystemService {
 
     private static final String TAG = "GameSpaceManagerService";
     private static final String GAME_LIST_SETTING = Settings.System.GAMESPACE_GAME_LIST;
+    private static final String AUTO_DETECT_SETTING = "gamespace_auto_game_detect";
+    private static final String DENIED_LIST_SETTING = "gamespace_denied_list";
+    private static final String ACTION_GAME_STATE_CHANGED =
+            "com.android.server.action.PENTAS_GAME_STATE_CHANGED";
+    private static final String EXTRA_GAME_PACKAGE = "package_name";
     private static final Set<String> VALID_MODES = Set.of("1", "2", "3");
 
     private final Context mContext;
@@ -50,6 +56,8 @@ public class GameSpaceManagerService extends SystemService {
     private final Handler mBackgroundHandler;
     private final BroadcastReceiver mPackageChangeReceiver = new PackageChangeReceiver();
     private final ContentObserver mGameListObserver;
+    private final PentasSessionBinder mPentasSessions;
+    private int mCurrentUserId;
 
     public GameSpaceManagerService(Context context) {
         super(context);
@@ -59,13 +67,55 @@ public class GameSpaceManagerService extends SystemService {
         HandlerThread handlerThread = new HandlerThread("GameSpaceManagerThread");
         handlerThread.start();
         mBackgroundHandler = new Handler(handlerThread.getLooper());
+        mPentasSessions = new PentasSessionBinder(context, mBackgroundHandler);
 
         mGameListObserver = new GameListObserver(mBackgroundHandler);
     }
 
     @Override
     public void onStart() {
-        // No-op
+        mCurrentUserId = ActivityManager.getCurrentUser();
+        // SystemUI detects foreground games, but only system_server binds Pentas's private
+        // session service. Require the sender's privileged permission on this bridge.
+        mContext.registerReceiverAsUser(new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                final int userId = intent.getIntExtra(
+                        Intent.EXTRA_USER_HANDLE, UserHandle.USER_NULL);
+                if (userId != mCurrentUserId || userId != ActivityManager.getCurrentUser()) return;
+                final String packageName = intent.getStringExtra(EXTRA_GAME_PACKAGE);
+                if (packageName != null && isInGameList(packageName, userId)) {
+                    mPentasSessions.start(packageName, userId);
+                } else {
+                    mPentasSessions.stop();
+                }
+            }
+        }, UserHandle.ALL, new IntentFilter(ACTION_GAME_STATE_CHANGED),
+                android.Manifest.permission.MANAGE_GAME_MODE, mBackgroundHandler,
+                Context.RECEIVER_EXPORTED);
+    }
+
+    @Override
+    public void onUserSwitching(TargetUser from, TargetUser to) {
+        mBackgroundHandler.post(() -> {
+            mCurrentUserId = to.getUserIdentifier();
+            mPentasSessions.stop();
+            sanitizeGameList(mCurrentUserId);
+        });
+    }
+
+    private boolean isInGameList(String packageName, int userId) {
+        final String games = Settings.System.getStringForUser(
+                mContext.getContentResolver(), GAME_LIST_SETTING, userId);
+        if (games == null) return false;
+        for (String entry : games.split(";")) {
+            final int separator = entry.indexOf('=');
+            if (separator > 0 && packageName.equals(entry.substring(0, separator).trim())
+                    && isValidMode(entry.substring(separator + 1).trim())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -75,54 +125,63 @@ public class GameSpaceManagerService extends SystemService {
             filter.addAction(Intent.ACTION_PACKAGE_ADDED);
             filter.addAction(Intent.ACTION_PACKAGE_FULLY_REMOVED);
             filter.addDataScheme("package");
-            mContext.registerReceiver(mPackageChangeReceiver, filter);
+            mContext.registerReceiverAsUser(mPackageChangeReceiver, UserHandle.ALL, filter,
+                    null, mBackgroundHandler);
 
             mContext.getContentResolver().registerContentObserver(
                 Settings.System.getUriFor(GAME_LIST_SETTING), false,
                 mGameListObserver, UserHandle.USER_ALL);
 
-            sanitizeGameList();
+            mBackgroundHandler.post(() -> sanitizeGameList(ActivityManager.getCurrentUser()));
         }
     }
 
     private class PackageChangeReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
-            String packageName = intent.getData().getSchemeSpecificPart();
+            String packageName = intent.getData() != null
+                    ? intent.getData().getSchemeSpecificPart() : null;
             if (packageName == null) return;
+            final int userId = intent.getIntExtra(
+                    Intent.EXTRA_USER_HANDLE, UserHandle.USER_SYSTEM);
 
             mBackgroundHandler.post(() -> {
                 if (Intent.ACTION_PACKAGE_ADDED.equals(intent.getAction())) {
-                    handlePackageAdded(packageName);
+                    handlePackageAdded(packageName, userId);
                 } else if (Intent.ACTION_PACKAGE_FULLY_REMOVED.equals(intent.getAction())) {
-                    handlePackageRemoved(packageName);
+                    removeFromGameSpace(packageName, userId);
                 }
             });
         }
     }
 
-    private void handlePackageAdded(String packageName) {
-        if (isGame(packageName)) {
-            addToGameSpace(packageName);
+    private void handlePackageAdded(String packageName, int userId) {
+        final ContentResolver cr = mContext.getContentResolver();
+        if (Settings.System.getIntForUser(cr, AUTO_DETECT_SETTING, 1, userId) == 0) return;
+        final String denied = Settings.System.getStringForUser(cr, DENIED_LIST_SETTING, userId);
+        if (denied != null) {
+            for (String entry : denied.split(";")) {
+                if (packageName.equals(entry.trim())) return;
+            }
+        }
+        if (isGame(packageName, userId)) {
+            addToGameSpace(packageName, userId);
         }
     }
 
-    private void handlePackageRemoved(String packageName) {
-        removeFromGameSpace(packageName);
-    }
-
-    private boolean isGame(String packageName) {
+    private boolean isGame(String packageName, int userId) {
         try {
-            ApplicationInfo appInfo = mPackageManager.getApplicationInfo(packageName, PackageManager.GET_META_DATA);
+            ApplicationInfo appInfo = mPackageManager.getApplicationInfoAsUser(
+                    packageName, PackageManager.GET_META_DATA, userId);
             return appInfo != null && appInfo.category == ApplicationInfo.CATEGORY_GAME;
         } catch (PackageManager.NameNotFoundException e) {
             return false;
         }
     }
 
-    private void addToGameSpace(String packageName) {
+    private void addToGameSpace(String packageName, int userId) {
         ContentResolver cr = mContext.getContentResolver();
-        String currentList = Settings.System.getStringForUser(cr, GAME_LIST_SETTING, UserHandle.USER_CURRENT);
+        String currentList = Settings.System.getStringForUser(cr, GAME_LIST_SETTING, userId);
         Map<String, String> gameMap = new HashMap<>();
 
         if (currentList != null && !currentList.isEmpty()) {
@@ -138,14 +197,16 @@ public class GameSpaceManagerService extends SystemService {
         if (!gameMap.containsKey(packageName)) {
             gameMap.put(packageName, "2");
             String updatedList = serializeGameMap(gameMap);
-            Settings.System.putStringForUser(cr, GAME_LIST_SETTING, updatedList, UserHandle.USER_CURRENT);
-            sendGameAddedNotification(packageName);
+            Settings.System.putStringForUser(cr, GAME_LIST_SETTING, updatedList, userId);
+            if (userId == ActivityManager.getCurrentUser()) {
+                sendGameAddedNotification(packageName, userId);
+            }
         }
     }
 
-    private void removeFromGameSpace(String packageName) {
+    private void removeFromGameSpace(String packageName, int userId) {
         ContentResolver cr = mContext.getContentResolver();
-        String currentList = Settings.System.getStringForUser(cr, GAME_LIST_SETTING, UserHandle.USER_CURRENT);
+        String currentList = Settings.System.getStringForUser(cr, GAME_LIST_SETTING, userId);
         if (currentList == null || currentList.isEmpty()) return;
 
         Map<String, String> gameMap = new HashMap<>();
@@ -158,16 +219,16 @@ public class GameSpaceManagerService extends SystemService {
         }
 
         String updatedList = serializeGameMap(gameMap);
-        Settings.System.putStringForUser(cr, GAME_LIST_SETTING, updatedList, UserHandle.USER_CURRENT);
+        Settings.System.putStringForUser(cr, GAME_LIST_SETTING, updatedList, userId);
     }
 
     private boolean isValidMode(String modeStr) {
         return VALID_MODES.contains(modeStr);
     }
 
-    private void sanitizeGameList() {
+    private void sanitizeGameList(int userId) {
         ContentResolver cr = mContext.getContentResolver();
-        String currentList = Settings.System.getStringForUser(cr, GAME_LIST_SETTING, UserHandle.USER_CURRENT);
+        String currentList = Settings.System.getStringForUser(cr, GAME_LIST_SETTING, userId);
         if (currentList == null || currentList.isEmpty()) return;
 
         Map<String, String> gameMap = new HashMap<>();
@@ -184,7 +245,9 @@ public class GameSpaceManagerService extends SystemService {
         }
 
         String sanitizedList = serializeGameMap(gameMap);
-        Settings.System.putStringForUser(cr, GAME_LIST_SETTING, sanitizedList, UserHandle.USER_CURRENT);
+        if (!sanitizedList.equals(currentList)) {
+            Settings.System.putStringForUser(cr, GAME_LIST_SETTING, sanitizedList, userId);
+        }
     }
 
     private String serializeGameMap(Map<String, String> gameMap) {
@@ -203,15 +266,15 @@ public class GameSpaceManagerService extends SystemService {
         @Override
         public void onChange(boolean selfChange) {
             super.onChange(selfChange);
-            sanitizeGameList();
+            sanitizeGameList(ActivityManager.getCurrentUser());
         }
     }
 
-    private void sendGameAddedNotification(String packageName) {
+    private void sendGameAddedNotification(String packageName, int userId) {
         String appName;
         try {
             appName = mPackageManager.getApplicationLabel(
-                mPackageManager.getApplicationInfo(packageName, 0)).toString();
+                mPackageManager.getApplicationInfoAsUser(packageName, 0, userId)).toString();
         } catch (PackageManager.NameNotFoundException e) {
             appName = packageName;
         }
