@@ -60,9 +60,8 @@ import kotlinx.coroutines.flow.onEach
 
 private const val PILL_GAP_DP = 8f
 private const val PILL_SPACING_DP = 8f
-private const val PILL_WIDTH_DP = 60f
-private const val PILL_VERTICAL_PADDING_DP = 8f
 private const val APP_ICON_SIZE_DP = 24f
+private const val PILL_VERTICAL_PADDING_DP = 8f
 private const val APP_ICON_BITMAP_PX = 64
 private const val ANIMATION_MS = 150L
 
@@ -162,8 +161,8 @@ constructor(
                 }
             val frame =
                 FrameLayout(context).apply {
-                    val v = (PILL_VERTICAL_PADDING_DP * density).toInt()
-                    setPadding(0, v, 0, v)
+                    val verticalPadding = (PILL_VERTICAL_PADDING_DP * density).toInt()
+                    setPadding(0, verticalPadding, 0, verticalPadding)
                     addView(
                         compose,
                         FrameLayout.LayoutParams(
@@ -174,7 +173,9 @@ constructor(
                 }
             val params =
                 LinearLayout.LayoutParams(
-                        (PILL_WIDTH_DP * density).toInt(),
+                        context.resources.getDimensionPixelSize(
+                            R.dimen.volume_dialog_slider_width
+                        ),
                         ViewGroup.LayoutParams.MATCH_PARENT,
                     )
                     .apply {
