@@ -139,6 +139,7 @@ fun BrightnessSlider(
     showToast: () -> Unit = {},
     hapticsViewModelFactory: SliderHapticsViewModel.Factory,
     dimensions: BrightnessSliderDimensions = BrightnessSliderDimensions.Default,
+    roundedSlider: Boolean = false,
 ) {
     var value by remember(gammaValue) { mutableIntStateOf(gammaValue) }
     val animatedValue by
@@ -256,8 +257,20 @@ fun BrightnessSlider(
                         }
                     },
             interactionSource = interactionSource,
-            thumb = { Box(Modifier.size(56.dp)) },
+            thumb = {
+                if (roundedSlider) {
+                    Box(Modifier.size(56.dp))
+                } else {
+                    SliderDefaults.Thumb(
+                        interactionSource = interactionSource,
+                        enabled = enabled,
+                        thumbSize = DpSize(dimensions.thumbWidth, dimensions.thumbHeight),
+                        colors = colors,
+                    )
+                }
+            },
             track = { sliderState ->
+                if (roundedSlider) {
                 val thumbSize = 56.dp
                 val density = LocalDensity.current
                 val activeColor = MaterialTheme.colorScheme.primary
@@ -297,6 +310,86 @@ fun BrightnessSlider(
                         active.place(0, 0)
                     }
                 }
+                } else {
+                var showIconActive by remember { mutableStateOf(true) }
+                val iconActiveAlphaAnimatable = remember {
+                    Animatable(
+                        initialValue = 1f,
+                        typeConverter = Float.VectorConverter,
+                        label = "iconActiveAlpha",
+                    )
+                }
+
+                val iconInactiveAlphaAnimatable = remember {
+                    Animatable(
+                        initialValue = 0f,
+                        typeConverter = Float.VectorConverter,
+                        label = "iconInactiveAlpha",
+                    )
+                }
+
+                LaunchedEffect(iconActiveAlphaAnimatable, iconInactiveAlphaAnimatable, showIconActive) {
+                    if (showIconActive) {
+                        launch { iconActiveAlphaAnimatable.appear() }
+                        launch { iconInactiveAlphaAnimatable.disappear() }
+                    } else {
+                        launch { iconActiveAlphaAnimatable.disappear() }
+                        launch { iconInactiveAlphaAnimatable.appear() }
+                    }
+                }
+
+                SliderDefaults.Track(
+                    sliderState = sliderState,
+                    modifier =
+                        Modifier.motionTestValues {
+                                iconActiveAlphaAnimatable.value exportAs
+                                    BrightnessSliderMotionTestKeys.ActiveIconAlpha
+                                iconInactiveAlphaAnimatable.value exportAs
+                                    BrightnessSliderMotionTestKeys.InactiveIconAlpha
+                            }
+                            .height(dimensions.trackHeight)
+                            .drawWithContent {
+                                drawContent()
+
+                                val yOffset = size.height / 2 - iconSize.toSize().height / 2
+                                val activeTrackStart = 0f
+                                val activeTrackEnd =
+                                    size.width * sliderState.coercedValueAsFraction -
+                                        ThumbTrackGapSize.toPx()
+                                val inactiveTrackStart = activeTrackEnd + ThumbTrackGapSize.toPx() * 2
+                                val inactiveTrackEnd = size.width
+
+                                val activeTrackWidth = activeTrackEnd - activeTrackStart
+                                val inactiveTrackWidth = inactiveTrackEnd - inactiveTrackStart
+
+                                if (
+                                    iconSize.toSize().width <
+                                        inactiveTrackWidth - IconPadding.toPx() * 2
+                                ) {
+                                    showIconActive = false
+                                    trackIcon(
+                                        Offset(inactiveTrackEnd, yOffset),
+                                        inactiveIconColor,
+                                        iconInactiveAlphaAnimatable.value,
+                                    )
+                                } else if (
+                                    iconSize.toSize().width < activeTrackWidth - IconPadding.toPx() * 2
+                                ) {
+                                    showIconActive = true
+                                    trackIcon(
+                                        Offset(activeTrackEnd, yOffset),
+                                        activeIconColor,
+                                        iconActiveAlphaAnimatable.value,
+                                    )
+                                }
+                            },
+                    trackCornerSize = SliderTrackRoundedCorner,
+                    trackInsideCornerSize = 2.dp,
+                    drawStopIndicator = null,
+                    thumbTrackGapSize = ThumbTrackGapSize,
+                    colors = colors,
+                )
+                }
             },
         )
 
@@ -317,6 +410,20 @@ fun BrightnessSlider(
                 currentShowToast()
             }
         }
+    }
+}
+
+private fun Modifier.sliderBackground(
+    backgroundFrameSize: DpSize,
+    backgroundRoundedCorner: Dp,
+    color: Color,
+) = drawWithCache {
+    val offsetAround = backgroundFrameSize.toSize()
+    val newSize = Size(size.width + 2 * offsetAround.width, size.height + 2 * offsetAround.height)
+    val offset = Offset(-offsetAround.width, -offsetAround.height)
+    val cornerRadius = CornerRadius(backgroundRoundedCorner.toPx())
+    onDrawBehind {
+        drawRoundRect(color = color, topLeft = offset, size = newSize, cornerRadius = cornerRadius)
     }
 }
 
@@ -377,6 +484,7 @@ fun BrightnessSliderContainer(
     viewModel: BrightnessSliderViewModel,
     modifier: Modifier = Modifier,
     containerColors: ContainerColors,
+    roundedSlider: Boolean = false,
     dimensions: BrightnessSliderDimensions = BrightnessSliderDimensions.Default,
 ) {
     val gamma = viewModel.currentBrightness.value
@@ -416,7 +524,13 @@ fun BrightnessSliderContainer(
         )
 
     val isRestricted = restriction is PolicyRestriction.Restricted
-    Box(modifier = modifier.fillMaxWidth().sysuiResTag("brightness_slider")) {
+    val containerModifier = if (roundedSlider) {
+        modifier.fillMaxWidth().sysuiResTag("brightness_slider")
+    } else {
+        modifier.padding(vertical = { dimensions.verticalPadding.roundToPx() })
+            .fillMaxWidth().sysuiResTag("brightness_slider")
+    }
+    Box(modifier = containerModifier) {
         BrightnessSlider(
             enabled = enabled && !isRestricted,
             gammaValue = gamma,
@@ -440,10 +554,19 @@ fun BrightnessSliderContainer(
             modifier =
                 Modifier.borderOnFocus(
                         color = MaterialTheme.colorScheme.secondary,
-                        cornerSize = CornerSize(32.dp),
+                        cornerSize = CornerSize(
+                            if (roundedSlider) 32.dp else SliderTrackRoundedCorner
+                        ),
                     )
                     .then(if (viewModel.showMirror) Modifier.drawInOverlay() else Modifier)
-                    .sliderBackgroundRound(containerColor)
+                    .then(
+                        if (roundedSlider) Modifier.sliderBackgroundRound(containerColor)
+                        else Modifier.sliderBackground(
+                            DpSize(dimensions.backgroundFrameWidth, dimensions.backgroundFrameHeight),
+                            dimensions.backgroundRoundedCorner,
+                            containerColor,
+                        )
+                    )
                     .fillMaxWidth()
                     .pointerInteropFilter {
                         if (
@@ -463,6 +586,7 @@ fun BrightnessSliderContainer(
                 )
             },
             dimensions = dimensions,
+            roundedSlider = roundedSlider,
         )
     }
 }

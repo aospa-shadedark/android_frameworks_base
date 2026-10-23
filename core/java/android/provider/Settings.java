@@ -6944,6 +6944,12 @@ public final class Settings {
                 "qs_brightness_position_bottom";
 
         /**
+         * Whether the QS brightness slider uses the rounded style.
+         * @hide
+         */
+        public static final String QS_BRIGHTNESS_SLIDER_ROUND = "qs_brightness_slider_round";
+
+        /**
          * Setting to set enable/disable CV dynamic mode.
          * Setting should be boolean (0 or 1)
          *

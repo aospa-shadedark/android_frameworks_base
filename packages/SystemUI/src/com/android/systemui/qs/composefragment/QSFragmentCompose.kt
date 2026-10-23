@@ -211,6 +211,7 @@ constructor(
     private var bottomContentPadding by mutableIntStateOf(0)
     private var showBrightness by mutableIntStateOf(1)
     private var brightnessAtBottom by mutableStateOf(false)
+    private var roundBrightnessSlider by mutableStateOf(false)
     private lateinit var settingsResolver: ContentResolver
     private lateinit var settingsObserver: ContentObserver
     private val containerView: FrameLayoutTouchPassthrough?
@@ -226,6 +227,7 @@ constructor(
                     null,
                     Settings.System.QS_SHOW_BRIGHTNESS,
                     Settings.System.QS_BRIGHTNESS_POSITION_BOTTOM -> readBrightnessSettings()
+                    Settings.System.QS_BRIGHTNESS_SLIDER_ROUND -> readBrightnessSettings()
                 }
             }
         }
@@ -234,6 +236,9 @@ constructor(
             UserHandle.USER_ALL)
         settingsResolver.registerContentObserver(
             Settings.System.getUriFor(Settings.System.QS_BRIGHTNESS_POSITION_BOTTOM), false,
+            settingsObserver, UserHandle.USER_ALL)
+        settingsResolver.registerContentObserver(
+            Settings.System.getUriFor(Settings.System.QS_BRIGHTNESS_SLIDER_ROUND), false,
             settingsObserver, UserHandle.USER_ALL)
         readBrightnessSettings()
     }
@@ -250,6 +255,9 @@ constructor(
             settingsResolver, Settings.System.QS_SHOW_BRIGHTNESS, 1, UserHandle.USER_CURRENT)
         brightnessAtBottom = Settings.System.getIntForUser(
             settingsResolver, Settings.System.QS_BRIGHTNESS_POSITION_BOTTOM, 0,
+            UserHandle.USER_CURRENT) != 0
+        roundBrightnessSlider = Settings.System.getIntForUser(
+            settingsResolver, Settings.System.QS_BRIGHTNESS_SLIDER_ROUND, 0,
             UserHandle.USER_CURRENT) != 0
     }
 
@@ -806,7 +814,7 @@ constructor(
                 val brightnessSliderElement: @Composable () -> Unit = {
                     if (viewModel.isBrightnessSliderVisible) {
                         Element(Elements.BrightnessSlider, modifier = modifier) {
-                            BrightnessSliderContent(viewModel, layoutState)
+                            BrightnessSliderContent(viewModel, layoutState, roundBrightnessSlider)
                         }
                     }
                 }
@@ -889,7 +897,7 @@ constructor(
                         val brightnessSliderElement: @Composable () -> Unit = {
                             if (viewModel.isBrightnessSliderVisible) {
                                 Element(Elements.BrightnessSlider, modifier = Modifier) {
-                                    BrightnessSliderContent(viewModel, layoutState)
+                                    BrightnessSliderContent(viewModel, layoutState, roundBrightnessSlider)
                                 }
                             }
                         }
@@ -981,6 +989,7 @@ constructor(
     private fun BrightnessSliderContent(
         viewModel: QSFragmentComposeViewModel,
         layoutState: SceneTransitionLayoutState,
+        rounded: Boolean,
     ) {
         Box(
             Modifier.systemGestureExclusionInShade(
@@ -996,6 +1005,7 @@ constructor(
                     containerColors =
                         ContainerColors(Color.Transparent, ContainerColors.defaultContainerColor),
                     modifier = Modifier.fillMaxWidth(),
+                    roundedSlider = rounded,
                 )
             }
         }
