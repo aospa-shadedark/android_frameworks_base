@@ -24,6 +24,7 @@ import android.hardware.SensorPrivacyManager;
 
 import com.android.keyguard.KeyguardViewController;
 import com.android.systemui.CoreStartable;
+import com.android.systemui.luminous.LuminousStartable;
 import com.android.systemui.Flags;
 import com.android.systemui.ScreenDecorationsModule;
 import com.android.systemui.accessibility.AccessibilityModule;
@@ -194,6 +195,11 @@ import javax.inject.Provider;
         ReferenceSysUIDisplaySubcomponent.class
 })
 public abstract class ReferenceSystemUIModule {
+
+    @Binds
+    @IntoMap
+    @ClassKey(LuminousStartable.class)
+    abstract CoreStartable bindLuminousStartable(LuminousStartable luminousStartable);
 
     @Binds
     abstract SystemUIDisplaySubcomponent.Factory systemUIDisplaySubcomponentFactory(
