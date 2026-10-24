@@ -154,6 +154,7 @@ import com.android.systemui.qs.panels.shared.model.QSFragmentComposeClippingTabl
 import com.android.systemui.qs.panels.ui.compose.EditMode
 import com.android.systemui.qs.panels.ui.compose.QuickQuickSettings
 import com.android.systemui.qs.panels.ui.compose.TileGrid
+import com.android.systemui.qs.panels.ui.compose.infinitegrid.LocalUseCircularQsTileShapes
 import com.android.systemui.qs.shared.ui.QuickSettings.Elements
 import com.android.systemui.qs.ui.composable.QuickSettingsShade
 import com.android.systemui.qs.ui.composable.QuickSettingsShade.systemGestureExclusionInShade
@@ -212,6 +213,7 @@ constructor(
     private var showBrightness by mutableIntStateOf(1)
     private var brightnessAtBottom by mutableStateOf(false)
     private var roundBrightnessSlider by mutableStateOf(false)
+    private var useCircularQsTileShapes by mutableStateOf(false)
     private lateinit var settingsResolver: ContentResolver
     private lateinit var settingsObserver: ContentObserver
     private val containerView: FrameLayoutTouchPassthrough?
@@ -226,8 +228,9 @@ constructor(
                 when (uri?.lastPathSegment) {
                     null,
                     Settings.System.QS_SHOW_BRIGHTNESS,
-                    Settings.System.QS_BRIGHTNESS_POSITION_BOTTOM -> readBrightnessSettings()
-                    Settings.System.QS_BRIGHTNESS_SLIDER_ROUND -> readBrightnessSettings()
+                    Settings.System.QS_BRIGHTNESS_POSITION_BOTTOM,
+                    Settings.System.QS_BRIGHTNESS_SLIDER_ROUND,
+                    Settings.System.QS_TILES_CIRCULAR -> readQsSettings()
                 }
             }
         }
@@ -240,7 +243,10 @@ constructor(
         settingsResolver.registerContentObserver(
             Settings.System.getUriFor(Settings.System.QS_BRIGHTNESS_SLIDER_ROUND), false,
             settingsObserver, UserHandle.USER_ALL)
-        readBrightnessSettings()
+        settingsResolver.registerContentObserver(
+            Settings.System.getUriFor(Settings.System.QS_TILES_CIRCULAR), false,
+            settingsObserver, UserHandle.USER_ALL)
+        readQsSettings()
     }
 
     override fun onStop() {
@@ -250,7 +256,7 @@ constructor(
         super.onStop()
     }
 
-    private fun readBrightnessSettings() {
+    private fun readQsSettings() {
         showBrightness = Settings.System.getIntForUser(
             settingsResolver, Settings.System.QS_SHOW_BRIGHTNESS, 1, UserHandle.USER_CURRENT)
         brightnessAtBottom = Settings.System.getIntForUser(
@@ -259,6 +265,8 @@ constructor(
         roundBrightnessSlider = Settings.System.getIntForUser(
             settingsResolver, Settings.System.QS_BRIGHTNESS_SLIDER_ROUND, 0,
             UserHandle.USER_CURRENT) != 0
+        useCircularQsTileShapes = Settings.System.getIntForUser(
+            settingsResolver, Settings.System.QS_TILES_CIRCULAR, 0, UserHandle.USER_CURRENT) != 0
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -327,35 +335,39 @@ constructor(
     @Composable
     private fun Content(modifier: Modifier = Modifier) {
         PlatformTheme(isDarkTheme = if (notificationShadeBlur()) isSystemInDarkTheme() else true) {
-            ProvideShortcutHelperIndication(interactionsConfig = interactionsConfig()) {
-                Box(
-                    modifier =
-                        modifier
-                            .layout { measurable, constraints ->
-                                measurable.measure(constraints).run {
-                                    layout(width, height) {
-                                        if (viewModel.isQsVisibleAndAnyShadeExpanded) {
-                                            place(0, 0)
+            CompositionLocalProvider(
+                LocalUseCircularQsTileShapes provides useCircularQsTileShapes,
+            ) {
+                ProvideShortcutHelperIndication(interactionsConfig = interactionsConfig()) {
+                    Box(
+                        modifier =
+                            modifier
+                                .layout { measurable, constraints ->
+                                    measurable.measure(constraints).run {
+                                        layout(width, height) {
+                                            if (viewModel.isQsVisibleAndAnyShadeExpanded) {
+                                                place(0, 0)
+                                            }
                                         }
                                     }
                                 }
-                            }
-                            .graphicsLayer { alpha = viewModel.viewAlpha }
-                            .thenIf(!Flags.notificationShadeBlur()) {
-                                Modifier.offset {
-                                    IntOffset(
-                                        x = 0,
-                                        y = viewModel.viewTranslationY.fastRoundToInt(),
-                                    )
+                                .graphicsLayer { alpha = viewModel.viewAlpha }
+                                .thenIf(!Flags.notificationShadeBlur()) {
+                                    Modifier.offset {
+                                        IntOffset(
+                                            x = 0,
+                                            y = viewModel.viewTranslationY.fastRoundToInt(),
+                                        )
+                                    }
                                 }
-                            }
-                            // Disable touches in the whole composable while the mirror is
-                            // showing. While the mirror is showing, an ancestor of the
-                            // ComposeView is made alpha 0, but touches are still being captured
-                            // by the composables.
-                            .thenIf(viewModel.showingMirror) { Modifier.gesturesDisabled() }
-                ) {
-                    CollapsableQuickSettingsSTL()
+                                // Disable touches in the whole composable while the mirror is
+                                // showing. While the mirror is showing, an ancestor of the
+                                // ComposeView is made alpha 0, but touches are still being captured
+                                // by the composables.
+                                .thenIf(viewModel.showingMirror) { Modifier.gesturesDisabled() }
+                    ) {
+                        CollapsableQuickSettingsSTL()
+                    }
                 }
             }
         }
