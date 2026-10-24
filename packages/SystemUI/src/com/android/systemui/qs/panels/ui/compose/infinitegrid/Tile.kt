@@ -36,15 +36,19 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.State
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -93,6 +97,7 @@ import com.android.systemui.qs.panels.ui.compose.infinitegrid.CommonTileDefaults
 import com.android.systemui.qs.panels.ui.compose.infinitegrid.CommonTileDefaults.InactiveIconCornerRadius
 import com.android.systemui.qs.panels.ui.compose.infinitegrid.CommonTileDefaults.InactiveTileCornerRadius
 import com.android.systemui.qs.panels.ui.compose.infinitegrid.CommonTileDefaults.TileHeight
+import com.android.systemui.qs.panels.ui.compose.infinitegrid.CommonTileDefaults.ToggleTargetSize
 import com.android.systemui.qs.panels.ui.compose.infinitegrid.CommonTileDefaults.longPressLabelMoreDetails
 import com.android.systemui.qs.panels.ui.compose.infinitegrid.CommonTileDefaults.longPressLabelSettings
 import com.android.systemui.qs.panels.ui.viewmodel.AccessibilityUiState
@@ -113,6 +118,8 @@ import platform.test.motion.compose.values.motionTestValues
 
 private val TileViewModel.traceName
     get() = spec.toString().takeLast(Trace.MAX_SECTION_NAME_LEN)
+
+internal val LocalUseCircularQsTileShapes = compositionLocalOf { false }
 
 /**
  * This composable function is responsible for rendering a tile based on the provided
@@ -177,6 +184,8 @@ fun ContentScope.Tile(
 
         // TODO(b/361789146): Draw the shapes instead of clipping
         val tileShape by TileDefaults.animateTileShapeAsState(uiState)
+        val circularIconTile = LocalUseCircularQsTileShapes.current && iconOnly
+        val tileHeight = TileHeight
         val animatedColor by animateColorAsState(colors.background, label = "QSTileBackgroundColor")
         val isDualTarget = uiState.handlesToggleClick
         val interactionSource = remember { MutableInteractionSource() }
@@ -226,6 +235,14 @@ fun ContentScope.Tile(
                 hapticsViewModel = hapticsViewModel,
                 modifier =
                     modifier
+                        // Size the painted surface, keeping it centered in the full grid slot.
+                        .thenIf(circularIconTile) {
+                            Modifier.fillMaxWidth()
+                                .height(tileHeight)
+                                .wrapContentSize(Alignment.Center)
+                                .widthIn(max = tileHeight)
+                                .aspectRatio(1f)
+                        }
                         .then(surfaceRevealModifier)
                         .borderOnFocus(
                             color = MaterialTheme.colorScheme.secondary,
@@ -609,6 +626,7 @@ private object TileDefaults {
 
     @Composable
     fun iconRadius(uiState: TileUiState): Dp {
+        if (LocalUseCircularQsTileShapes.current) return ToggleTargetSize / 2
         return when (uiState.visualState) {
             STATE_ACTIVE -> ActiveIconCornerRadius
             STATE_INACTIVE -> InactiveIconCornerRadius
@@ -618,6 +636,7 @@ private object TileDefaults {
 
     @Composable
     fun tileRadius(uiState: TileUiState): Dp {
+        if (LocalUseCircularQsTileShapes.current) return TileHeight / 2
         return when (uiState.visualState) {
             STATE_ACTIVE -> ActiveTileCornerRadius
             STATE_INACTIVE -> InactiveTileCornerRadius

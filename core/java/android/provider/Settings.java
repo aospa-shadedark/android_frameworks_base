@@ -6950,6 +6950,12 @@ public final class Settings {
         public static final String QS_BRIGHTNESS_SLIDER_ROUND = "qs_brightness_slider_round";
 
         /**
+         * Whether Quick Settings tiles use circular/pill-shaped corners.
+         * @hide
+         */
+        public static final String QS_TILES_CIRCULAR = "qs_tiles_circular";
+
+        /**
          * Setting to set enable/disable CV dynamic mode.
          * Setting should be boolean (0 or 1)
          *
