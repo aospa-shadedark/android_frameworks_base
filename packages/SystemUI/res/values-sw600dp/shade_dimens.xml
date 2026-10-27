@@ -52,6 +52,12 @@
     <dimen
         name="common_tile_default_toggle_target_size"
         android:featureFlag="com.android.systemui.desktop_sizing">44dp</dimen>
+    <dimen
+        name="common_tile_circular_tile_height"
+        android:featureFlag="com.android.systemui.desktop_sizing">@dimen/common_tile_default_tile_height</dimen>
+    <dimen
+        name="common_tile_circular_toggle_target_size"
+        android:featureFlag="com.android.systemui.desktop_sizing">@dimen/common_tile_default_toggle_target_size</dimen>
 
     <!-- QS shade overlay brightness bar -->
     <dimen
