@@ -120,6 +120,7 @@ private val TileViewModel.traceName
     get() = spec.toString().takeLast(Trace.MAX_SECTION_NAME_LEN)
 
 internal val LocalUseCircularQsTileShapes = compositionLocalOf { false }
+internal val LocalCircularQsTileSize = compositionLocalOf { 72 }
 
 /**
  * This composable function is responsible for rendering a tile based on the provided

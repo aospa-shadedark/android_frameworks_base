@@ -21,6 +21,7 @@ import android.graphics.drawable.Animatable
 import android.graphics.drawable.AnimatedVectorDrawable
 import android.graphics.drawable.Drawable
 import android.text.TextUtils
+import androidx.annotation.DimenRes
 import androidx.annotation.VisibleForTesting
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.graphics.res.animatedVectorResource
@@ -88,6 +89,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.lerp
 import com.android.compose.modifiers.size
 import com.android.compose.modifiers.thenIf
 import com.android.compose.ui.graphics.painter.rememberDrawablePainter
@@ -478,23 +480,30 @@ object CommonTileDefaults {
         @Composable
         @ReadOnlyComposable
         get() =
-            dimensionResource(
-                id =
-                    if (LocalUseCircularQsTileShapes.current)
-                        R.dimen.common_tile_circular_tile_height
-                    else R.dimen.common_tile_default_tile_height
+            circularTileDimension(
+                R.dimen.common_tile_default_tile_height,
+                R.dimen.common_tile_circular_tile_height,
             )
 
     val ToggleTargetSize: Dp
         @Composable
         @ReadOnlyComposable
         get() =
-            dimensionResource(
-                id =
-                    if (LocalUseCircularQsTileShapes.current)
-                        R.dimen.common_tile_circular_toggle_target_size
-                    else R.dimen.common_tile_default_toggle_target_size
+            circularTileDimension(
+                R.dimen.common_tile_default_toggle_target_size,
+                R.dimen.common_tile_circular_toggle_target_size,
             )
+
+    @Composable
+    @ReadOnlyComposable
+    private fun circularTileDimension(@DimenRes defaultId: Int, @DimenRes largeId: Int): Dp {
+        val defaultSize = dimensionResource(defaultId)
+        if (!LocalUseCircularQsTileShapes.current) return defaultSize
+
+        val fraction = (LocalCircularQsTileSize.current.coerceIn(72, 80) - 72) / 8f
+        // Read both endpoints from resources to preserve compact desktop dimensions.
+        return lerp(defaultSize, dimensionResource(largeId), fraction)
+    }
 
     val SideIconWidth = 32.dp
     val SideIconHeight = 20.dp

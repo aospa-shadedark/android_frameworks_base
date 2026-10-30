@@ -6956,6 +6956,13 @@ public final class Settings {
         public static final String QS_TILES_CIRCULAR = "qs_tiles_circular";
 
         /**
+         * Circular Quick Settings tile height in dp, from 72 to 80 inclusive.
+         * Ignored when circular tiles are disabled. Defaults to 72.
+         * @hide
+         */
+        public static final String QS_TILES_CIRCULAR_SIZE = "qs_tiles_circular_size";
+
+        /**
          * Setting to set enable/disable CV dynamic mode.
          * Setting should be boolean (0 or 1)
          *
