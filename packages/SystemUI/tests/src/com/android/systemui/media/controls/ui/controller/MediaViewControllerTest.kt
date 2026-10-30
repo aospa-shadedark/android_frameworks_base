@@ -94,6 +94,7 @@ class MediaViewControllerTest : SysuiTestCase() {
     private lateinit var seamlessButton: View
     private lateinit var seamlessIcon: ImageView
     private lateinit var seamlessText: TextView
+    private lateinit var seamlessFormat: TextView
     private lateinit var scrubbingElapsedTimeView: TextView
     private lateinit var scrubbingTotalTimeView: TextView
     private lateinit var actionPlayPause: ImageButton
@@ -303,6 +304,7 @@ class MediaViewControllerTest : SysuiTestCase() {
         seamlessButton = View(context)
         seamlessIcon = ImageView(context)
         seamlessText = TextView(context)
+        seamlessFormat = TextView(context)
         seekBar = SeekBar(context).also { it.id = R.id.media_progress_bar }
 
         actionPlayPause = ImageButton(context).also { it.id = R.id.actionPlayPause }
@@ -329,6 +331,7 @@ class MediaViewControllerTest : SysuiTestCase() {
         whenever(viewHolder.seamlessButton).thenReturn(seamlessButton)
         whenever(viewHolder.seamlessIcon).thenReturn(seamlessIcon)
         whenever(viewHolder.seamlessText).thenReturn(seamlessText)
+        whenever(viewHolder.seamlessFormat).thenReturn(seamlessFormat)
         whenever(viewHolder.seekBar).thenReturn(seekBar)
         whenever(viewHolder.scrubbingElapsedTimeView).thenReturn(scrubbingElapsedTimeView)
         whenever(viewHolder.scrubbingTotalTimeView).thenReturn(scrubbingTotalTimeView)

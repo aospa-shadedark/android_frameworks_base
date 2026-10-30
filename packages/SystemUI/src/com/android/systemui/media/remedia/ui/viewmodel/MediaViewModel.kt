@@ -313,6 +313,7 @@ constructor(
                         get() {
                             return MediaDeviceChipViewModel(
                                 icon = session.outputDevice.icon,
+                                audioFormatLabel = session.outputDevice.audioFormatLabel,
                                 text =
                                     if (session.suggestedOutputDevice == null)
                                         session.outputDevice.name

@@ -156,6 +156,7 @@ internal constructor(
             val onPrimaryColorList = ColorStateList.valueOf(onPrimaryColor)
             mediaViewHolder.actionPlayPause.imageTintList = onPrimaryColorList
             mediaViewHolder.seamlessText.setTextColor(onPrimaryColor)
+            mediaViewHolder.seamlessFormat.setTextColor(onPrimaryColor)
             mediaViewHolder.seamlessIcon.imageTintList = onPrimaryColorList
         }
     }

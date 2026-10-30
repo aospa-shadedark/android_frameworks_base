@@ -54,6 +54,7 @@ import android.os.Process;
 import android.os.Trace;
 import android.os.UserHandle;
 import android.provider.Settings;
+import android.text.TextUtils;
 import android.util.Log;
 import android.util.Pair;
 import android.view.Gravity;
@@ -634,6 +635,7 @@ public class MediaControlPanel {
                     && !data.getResumption()) {
                 // Don't show the OSw device text if we have a suggestion: just show the icon
                 deviceText.setVisibility(View.GONE);
+                mMediaViewHolder.getSeamlessFormat().setVisibility(View.GONE);
                 setSuggestionClickListener(suggestionDeviceData);
                 setSuggestionText(suggestionDeviceData);
                 setSuggestionIcon(suggestionDeviceData);
@@ -717,6 +719,7 @@ public class MediaControlPanel {
         seamlessView.setVisibility(View.VISIBLE);
         ImageView iconView = mMediaViewHolder.getSeamlessIcon();
         TextView deviceName = mMediaViewHolder.getSeamlessText();
+        TextView audioFormat = mMediaViewHolder.getSeamlessFormat();
         final MediaDeviceData device = data.getDevice();
 
         // Disable clicking on output switcher for invalid devices and resumption controls
@@ -744,8 +747,16 @@ public class MediaControlPanel {
             // Set to default icon
             iconView.setImageResource(iconResource);
         }
+        final String format = device != null && device.getStreamInfo() != null
+                ? device.getStreamInfo().getCompactLabel() : null;
+        audioFormat.setText(format);
+        audioFormat.setVisibility(format == null ? View.GONE : View.VISIBLE);
+        audioFormat.setTextColor(deviceName.getCurrentTextColor());
+        deviceName.setEllipsize(TextUtils.TruncateAt.END);
         deviceName.setText(deviceString);
-        seamlessView.setContentDescription(deviceString);
+        seamlessView.setContentDescription(format == null ? deviceString
+                : mContext.getString(R.string.audio_stream_device_with_quality,
+                        deviceString, format));
         seamlessView.setOnClickListener(
                 v -> {
                     if (mFalsingManager.isFalseTap(FalsingManager.MODERATE_PENALTY)) {
@@ -753,7 +764,7 @@ public class MediaControlPanel {
                     }
 
                     mLogger.logOpenOutputSwitcher(mUid, mPackageName, mInstanceId);
-                    if (device.getIntent() != null) {
+                    if (device != null && device.getIntent() != null) {
                         PendingIntent deviceIntent = device.getIntent();
                         boolean showOverLockscreen =
                                 mKeyguardStateController.isShowing()

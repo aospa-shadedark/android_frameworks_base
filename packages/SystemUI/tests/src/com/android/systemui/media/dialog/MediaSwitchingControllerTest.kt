@@ -1656,6 +1656,71 @@ class MediaSwitchingControllerTest(flags: FlagsParameterization) : SysuiTestCase
     }
 
     @Test
+    fun launchAudioOutputSettings_currentRoute_opensHubForForegroundUser() {
+        val foregroundUser = UserHandle.of(10)
+        whenever(mLocalMediaManager.currentConnectedDevice).thenReturn(mMediaDevice1)
+        whenever(mUserTracker.userHandle).thenReturn(foregroundUser)
+        mMediaSwitchingController.mCallback = mCb
+
+        mMediaSwitchingController.launchAudioOutputSettings(mMediaDevice1)
+
+        val intentCaptor = argumentCaptor<Intent>()
+        if (Flags.fixOutputSwitcherMultiuserSupport()) {
+            verify(mStarter)
+                .startActivity(
+                    intentCaptor.capture(),
+                    eq(true),
+                    eq(null),
+                    eq(false),
+                    eq(foregroundUser),
+                )
+        } else {
+            verify(mStarter)
+                .startActivity(
+                    intentCaptor.capture(),
+                    eq(true),
+                    eq<ActivityTransitionAnimator.Controller?>(null),
+                )
+        }
+        assertThat(intentCaptor.firstValue.action)
+            .isEqualTo("com.android.settings.AUDIO_OUTPUT_SETTINGS")
+        assertThat(intentCaptor.firstValue.`package`).isEqualTo("com.android.settings")
+        verify(mCb).dismissDialog()
+    }
+
+    @Test
+    fun launchAudioOutputSettings_routeChanged_doesNotNavigate() {
+        whenever(mLocalMediaManager.currentConnectedDevice).thenReturn(mMediaDevice2)
+        mMediaSwitchingController.mCallback = mCb
+
+        mMediaSwitchingController.launchAudioOutputSettings(mMediaDevice1)
+
+        verifyNoInteractions(mStarter, mCb)
+    }
+
+    @Test
+    fun launchAudioOutputSettings_remoteRoute_doesNotNavigate() {
+        whenever(mLocalMediaManager.currentConnectedDevice).thenReturn(mMediaDevice1)
+        whenever(mMediaDevice1.features).thenReturn(listOf(MediaRoute2Info.FEATURE_REMOTE_PLAYBACK))
+        mMediaSwitchingController.mCallback = mCb
+
+        mMediaSwitchingController.launchAudioOutputSettings(mMediaDevice1)
+
+        verifyNoInteractions(mStarter, mCb)
+    }
+
+    @Test
+    fun launchAudioOutputSettings_inputRoute_doesNotNavigate() {
+        whenever(mLocalMediaManager.currentConnectedDevice).thenReturn(mMediaDevice1)
+        whenever(mMediaDevice1.isInputDevice).thenReturn(true)
+        mMediaSwitchingController.mCallback = mCb
+
+        mMediaSwitchingController.launchAudioOutputSettings(mMediaDevice1)
+
+        verifyNoInteractions(mStarter, mCb)
+    }
+
+    @Test
     @DisableFlags(FLAG_FIX_OUTPUT_SWITCHER_MULTIUSER_SUPPORT)
     fun launchBluetoothPairing_noDeepLink_startActivityWithBluetoothSettings() {
         whenever(mDialogTransitionAnimator.createActivityTransitionController(mDialogLaunchView))

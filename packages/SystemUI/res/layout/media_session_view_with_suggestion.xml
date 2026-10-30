@@ -235,18 +235,36 @@
                 android:layout_gravity="center"
                 android:tint="@color/materialColorOnSurface"
                 android:src="@*android:drawable/ic_media_seamless" />
-            <TextView
-                android:id="@+id/media_seamless_text"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_weight="1"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_vertical"
                 android:layout_marginStart="4dp"
-                android:fontFamily="@*android:string/config_headlineFontFamilyMedium"
-                android:singleLine="true"
-                android:text="@*android:string/ext_media_seamless_action"
-                android:textDirection="locale"
-                android:textSize="12sp"
-                android:lineHeight="16sp" />
+                android:orientation="vertical">
+                <TextView
+                    android:id="@+id/media_seamless_text"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@*android:string/config_headlineFontFamilyMedium"
+                    android:singleLine="true"
+                    android:ellipsize="end"
+                    android:text="@*android:string/ext_media_seamless_action"
+                    android:textDirection="locale"
+                    android:textSize="12sp"
+                    android:lineHeight="16sp" />
+                <TextView
+                    android:id="@+id/media_seamless_format"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@*android:string/config_headlineFontFamilyMedium"
+                    android:singleLine="true"
+                    android:ellipsize="end"
+                    android:textDirection="locale"
+                    android:textSize="11sp"
+                    android:lineHeight="14sp"
+                    android:visibility="gone" />
+            </LinearLayout>
         </com.android.systemui.animation.view.LaunchableLinearLayout>
     </LinearLayout>
 

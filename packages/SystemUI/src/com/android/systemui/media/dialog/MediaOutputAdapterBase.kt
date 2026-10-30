@@ -173,6 +173,17 @@ abstract class MediaOutputAdapterBase(protected val mController: MediaSwitchingC
                 restrictVolumeAdjustment = true
             }
 
+            if (connectionState == CONNECTED) {
+                val streamInfo = mController.getAudioStreamInfo(device)
+                if (streamInfo != null) {
+                    subtitle = streamInfo.summary
+                }
+                if (clickListener == null && mController.canShowAudioOutputSettings(device)) {
+                    clickListener =
+                        View.OnClickListener { mController.launchAudioOutputSettings(device) }
+                }
+            }
+
             renderDeviceItem(
                 device,
                 connectionState,

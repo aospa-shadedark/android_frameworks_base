@@ -7211,6 +7211,16 @@ public final class Settings {
         public static final String SHOW_APP_VOLUME = "show_app_volume";
 
         /**
+         * Whether to show dynamic audio codec / stream quality in the media player
+         * output switcher chip (Pixel Inline format).
+         * 0 = Off (Default)
+         * 1 = On
+         * @hide
+         */
+        @Readable
+        public static final String SHOW_AUDIO_CODEC_INDICATOR = "show_audio_codec_indicator";
+
+        /**
          * GameSpace: List of added games by user
          * @hide
          */

@@ -23,6 +23,7 @@ import android.media.session.MediaSession
 import android.os.Process
 import com.android.internal.logging.InstanceId
 import com.android.settingslib.media.LocalMediaManager.MediaDeviceState
+import com.android.systemui.media.controls.util.AudioStreamInfo
 import com.android.systemui.res.R
 
 /** State of a media view. */
@@ -185,6 +186,9 @@ constructor(
 
     /** Unique id for this device */
     val id: String? = null,
+
+    /** Reported codec or transport for this route; absent when disabled or unavailable. */
+    val streamInfo: AudioStreamInfo? = null,
 ) {
     /**
      * Check whether [MediaDeviceData] objects are equal in all fields except the icon. The icon is
@@ -199,7 +203,8 @@ constructor(
         return enabled == other.enabled &&
             name == other.name &&
             intent == other.intent &&
-            id == other.id
+            id == other.id &&
+            streamInfo == other.streamInfo
     }
 }
 

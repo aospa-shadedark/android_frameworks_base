@@ -289,6 +289,7 @@ constructor(
                                         contentDescription = null,
                                     ),
                             isInProgress = false,
+                            audioFormatLabel = this?.streamInfo?.compactLabel,
                             onClick = { expandable ->
                                 startOutputSwitcherClick(dataModel, expandable)
                             },

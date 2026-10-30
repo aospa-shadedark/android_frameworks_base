@@ -46,6 +46,8 @@ import com.android.systemui.media.controls.shared.model.MediaDeviceData
 import com.android.systemui.media.controls.shared.model.SuggestedMediaDeviceData
 import com.android.systemui.media.controls.shared.model.SuggestionData
 import com.android.systemui.media.controls.util.LocalMediaManagerFactory
+import com.android.systemui.media.controls.util.AudioStreamInfo
+import com.android.systemui.media.controls.util.AudioStreamInfoObserver
 import com.android.systemui.media.controls.util.MediaControllerFactory
 import com.android.systemui.media.controls.util.SuggestedDeviceManagerFactory
 import com.android.systemui.media.muteawait.MediaMuteAwaitConnectionManager
@@ -235,6 +237,8 @@ constructor(
             bgExecutor.execute { suggestedDeviceManager.requestDeviceSuggestion() }
         }
         private var current: MediaDeviceData? = null
+        private val streamInfoObserver =
+            AudioStreamInfoObserver(context, bgExecutor) { updateCurrent() }
 
         private var suggestionData: SuggestionData? = null
 
@@ -253,6 +257,7 @@ constructor(
             bgExecutor.execute {
                 if (!started) {
                     localMediaManager.registerCallback(this)
+                    streamInfoObserver.start()
                     muteAwaitConnectionManager.startListening()
                     playbackType = controller?.playbackInfo?.playbackType ?: PLAYBACK_TYPE_UNKNOWN
                     playbackVolumeControlId = controller?.playbackInfo?.volumeControlId
@@ -293,6 +298,7 @@ constructor(
                     started = false
                     controller?.unregisterCallback(this)
                     localMediaManager.unregisterCallback(this)
+                    streamInfoObserver.stop()
                     suggestedDeviceManager.removeListener(this)
                     suggestedDeviceManager.cancelAllRequests()
                     muteAwaitConnectionManager.stopListening()
@@ -341,6 +347,9 @@ constructor(
         override fun onSelectedDeviceStateChanged(device: MediaDevice, state: Int) {
             bgExecutor.execute { updateCurrent() }
         }
+
+        override fun onDeviceAttributesChanged() =
+            bgExecutor.execute { updateCurrent() }
 
         override fun onSuggestedDeviceStateUpdated(state: SuggestedDeviceState?) {
             if (!enableSuggestedDeviceUi() || isResumption) {
@@ -442,6 +451,7 @@ constructor(
                             connectedDevice?.copy(
                                 name = it.name ?: connectedDevice.name,
                                 icon = icon,
+                                streamInfo = null,
                             )
                         }
                             ?: MediaDeviceData(
@@ -510,7 +520,7 @@ constructor(
             //   - Name: To show the dynamic group name.
             //   - Icon: To show the group icon if there's more than one
             // selected route.
-            return connectedDevice.copy(name = name, icon = icon)
+            return connectedDevice.copy(name = name, icon = icon, streamInfo = null)
         }
 
         private fun getRemoteDeviceFallback() =
@@ -537,7 +547,19 @@ constructor(
         }
 
         private fun MediaDevice.toMediaDeviceData() =
-            MediaDeviceData(enabled = true, icon = iconWithoutBackground, name = name, id = id)
+            MediaDeviceData(
+                enabled = true,
+                icon = iconWithoutBackground,
+                name = name,
+                id = id,
+                streamInfo =
+                    if (!isResumption &&
+                        controller?.playbackInfo?.playbackType != PlaybackInfo.PLAYBACK_TYPE_REMOTE &&
+                        AudioStreamInfoObserver.isIndicatorEnabled(context)
+                    ) {
+                        AudioStreamInfo.resolve(context, localBluetoothManager.get(), this)
+                    } else null,
+            )
 
         /** Return a display name for the current device / route, or null if not possible */
         private fun getDeviceName(

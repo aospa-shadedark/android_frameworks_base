@@ -1516,6 +1516,14 @@ private fun DeviceChip(
     // its indication.
     val clickInteractionSource = remember { MutableInteractionSource() }
     val expandable = remember { Expandable() }
+    val outputDescription =
+        if (viewModel.text != null && viewModel.audioFormatLabel != null) {
+            LocalContext.current.getString(
+                R.string.audio_stream_device_with_quality,
+                viewModel.text,
+                viewModel.audioFormatLabel,
+            )
+        } else viewModel.text?.toString() ?: viewModel.defaultDescription
     Box(
         modifier =
             modifier
@@ -1524,9 +1532,7 @@ private fun DeviceChip(
                 .clickable(interactionSource = clickInteractionSource, indication = null) {
                     viewModel.onClick(expandable)
                 }
-                .clearAndSetSemantics {
-                    contentDescription = viewModel.text?.toString() ?: viewModel.defaultDescription
-                }
+                .clearAndSetSemantics { contentDescription = outputDescription }
     ) {
         Expandable(
             expandable = expandable,
@@ -1567,16 +1573,29 @@ private fun DeviceChip(
                         modifier = Modifier.size(16.dp),
                     )
                 }
-                AnimatedVisibility(visible = viewModel.text != null) {
+                AnimatedVisibility(
+                    visible = viewModel.text != null,
+                    modifier = Modifier.weight(1f, fill = false),
+                ) {
                     rememberLastNonNull(viewModel.text)?.let {
-                        Text(
-                            text = it.toString(),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = style.contentColor,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(horizontal = 4.dp),
-                        )
+                        Column(modifier = Modifier.padding(horizontal = 4.dp)) {
+                            Text(
+                                text = it.toString(),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = style.contentColor,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            viewModel.audioFormatLabel?.let { format ->
+                                Text(
+                                    text = format,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = style.contentColor,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        }
                     }
                 }
             }

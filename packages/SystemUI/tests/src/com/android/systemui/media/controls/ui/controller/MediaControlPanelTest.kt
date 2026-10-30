@@ -80,6 +80,7 @@ import com.android.systemui.media.controls.ui.view.GutsViewHolder
 import com.android.systemui.media.controls.ui.view.MediaCarouselScrollHandler
 import com.android.systemui.media.controls.ui.view.MediaViewHolder
 import com.android.systemui.media.controls.ui.viewmodel.SeekBarViewModel
+import com.android.systemui.media.controls.util.AudioStreamInfo
 import com.android.systemui.media.controls.util.MediaUiEventLogger
 import com.android.systemui.media.dialog.MediaOutputDialogManager
 import com.android.systemui.monet.ColorScheme
@@ -170,6 +171,7 @@ public class MediaControlPanelTest : SysuiTestCase() {
     @Mock private lateinit var seamlessBackground: RippleDrawable
     private lateinit var seamlessIcon: ImageView
     private lateinit var seamlessText: TextView
+    private lateinit var seamlessFormat: TextView
     private lateinit var seekBar: SeekBar
     private lateinit var action0: ImageButton
     private lateinit var action1: ImageButton
@@ -346,6 +348,7 @@ public class MediaControlPanelTest : SysuiTestCase() {
         seamlessButton = View(context)
         seamlessIcon = ImageView(context)
         seamlessText = TextView(context)
+        seamlessFormat = TextView(context)
         seekBar = SeekBar(context).also { it.id = R.id.media_progress_bar }
 
         action0 = ImageButton(context).also { it.setId(R.id.action0) }
@@ -399,6 +402,7 @@ public class MediaControlPanelTest : SysuiTestCase() {
         whenever(viewHolder.seamlessButton).thenReturn(seamlessButton)
         whenever(viewHolder.seamlessIcon).thenReturn(seamlessIcon)
         whenever(viewHolder.seamlessText).thenReturn(seamlessText)
+        whenever(viewHolder.seamlessFormat).thenReturn(seamlessFormat)
         whenever(viewHolder.seekBar).thenReturn(seekBar)
         whenever(viewHolder.scrubbingElapsedTimeView).thenReturn(scrubbingElapsedTimeView)
         whenever(viewHolder.scrubbingTotalTimeView).thenReturn(scrubbingTotalTimeView)
@@ -1159,6 +1163,26 @@ public class MediaControlPanelTest : SysuiTestCase() {
         assertThat(seamlessText.getText()).isEqualTo(DEVICE_NAME)
         assertThat(seamless.contentDescription).isEqualTo(DEVICE_NAME)
         assertThat(seamless.isEnabled()).isTrue()
+    }
+
+    @Test
+    fun bindDevice_formatIsSeparateAndClearedWhenRouteHasNoStreamInfo() {
+        val info = mock(AudioStreamInfo::class.java)
+        whenever(info.compactLabel).thenReturn("LHDCv5")
+        player.attachPlayer(viewHolder)
+
+        player.bindPlayer(mediaData.copy(device = device.copy(streamInfo = info)), PACKAGE)
+
+        assertThat(seamlessText.text).isEqualTo(DEVICE_NAME)
+        assertThat(seamlessFormat.text).isEqualTo("LHDCv5")
+        assertThat(seamlessFormat.visibility).isEqualTo(View.VISIBLE)
+        assertThat(seamless.contentDescription.toString()).contains("LHDCv5")
+
+        player.bindPlayer(mediaData, PACKAGE)
+
+        assertThat(seamlessFormat.visibility).isEqualTo(View.GONE)
+        assertThat(seamlessFormat.text.toString()).isEmpty()
+        assertThat(seamless.contentDescription).isEqualTo(DEVICE_NAME)
     }
 
     @Test

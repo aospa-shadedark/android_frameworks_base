@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The full output name and reported format, also used for accessibility. -->
+    <string name="audio_stream_device_with_quality">%1$s • %2$s</string>
+    <string name="audio_stream_connected_details_action">%1$s. Open audio output settings</string>
+</resources>

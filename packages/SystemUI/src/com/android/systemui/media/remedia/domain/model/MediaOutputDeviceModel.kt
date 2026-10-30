@@ -24,4 +24,5 @@ data class MediaOutputDeviceModel(
     val icon: Icon,
     val isInProgress: Boolean,
     val onClick: (Expandable?) -> Unit,
+    val audioFormatLabel: String? = null,
 )

@@ -67,6 +67,8 @@ import com.android.settingslib.volume.data.repository.AudioSharingRepository
 import com.android.systemui.animation.ActivityTransitionAnimator
 import com.android.systemui.animation.DialogTransitionAnimator
 import com.android.systemui.dagger.qualifiers.Background
+import com.android.systemui.media.controls.util.AudioStreamInfo
+import com.android.systemui.media.controls.util.AudioStreamInfoObserver
 import com.android.systemui.media.dialog.MediaItem.DeviceGroupMediaItem
 import com.android.systemui.media.dialog.MediaItem.DeviceMediaItem
 import com.android.systemui.media.dialog.MediaItem.GroupDividerMediaItem
@@ -166,6 +168,8 @@ constructor(
     private var mGroupSelectedItems: Boolean? = null // Unset until the first render.
     private var mInAudioSharing = false
     private var mAudioShareJob: Job? = null
+    private val mStreamInfoObserver =
+        AudioStreamInfoObserver(mContext, mContext.mainExecutor) { mCallback.onRouteChanged() }
 
     @JvmField
     @VisibleForTesting
@@ -229,6 +233,7 @@ constructor(
             }
         }
         mCallback = cb
+        mStreamInfoObserver.start()
         mNearbyDeviceInfoMap.clear()
         if (mMediaSwitchingType != MediaSwitchingType.INPUT) {
             mNearbyMediaDevicesManager?.registerNearbyDevicesCallback(this)
@@ -256,6 +261,7 @@ constructor(
     }
 
     fun stop() {
+        mStreamInfoObserver.stop()
         mMediaController?.unregisterCallback(mCb)
         if (mMediaSwitchingType != MediaSwitchingType.INPUT) {
             mLocalMediaManager.unregisterCallback(this)
@@ -330,6 +336,34 @@ constructor(
 
     override fun onDeviceAttributesChanged() {
         mCallback.onRouteChanged()
+    }
+
+    /** Reported format for the selected local output; independent of the media label option. */
+    fun getAudioStreamInfo(device: MediaDevice): AudioStreamInfo? {
+        if (!canShowAudioOutputSettings(device)) return null
+        return AudioStreamInfo.resolve(mContext, mLocalBluetoothManager, device)
+    }
+
+    fun canShowAudioOutputSettings(device: MediaDevice): Boolean =
+        !device.isInputDevice &&
+            device.id == mLocalMediaManager.currentConnectedDevice?.id &&
+            !isCurrentConnectedDeviceRemote()
+
+    /** Open the shared audio hub; recheck the route when the user taps. */
+    fun launchAudioOutputSettings(device: MediaDevice) {
+        if (!canShowAudioOutputSettings(device)) return
+        val intent =
+            Intent(ACTION_AUDIO_OUTPUT_SETTINGS)
+                .setPackage("com.android.settings")
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        try {
+            mCallback.dismissDialog()
+            startActivity(intent, userHandle = mUserTracker.userHandle)
+        } catch (e: ActivityNotFoundException) {
+            Log.w(TAG, "Audio output settings are unavailable", e)
+        } catch (e: SecurityException) {
+            Log.w(TAG, "Audio output settings are not accessible", e)
+        }
     }
 
     override fun onMissingPermissionsUpdated(info: MissingPermissionsInfo?) {
@@ -1133,6 +1167,8 @@ constructor(
         private const val ALLOWLIST_REASON = "mediaoutput:remote_transfer"
         private const val ACTION_AUDIO_SHARING =
             "com.android.settings.BLUETOOTH_AUDIO_SHARING_SETTINGS"
+        private const val ACTION_AUDIO_OUTPUT_SETTINGS =
+            "com.android.settings.AUDIO_OUTPUT_SETTINGS"
         private const val EXTRA_SHOW_FRAGMENT_ARGUMENTS = ":settings:show_fragment_args"
     }
 }

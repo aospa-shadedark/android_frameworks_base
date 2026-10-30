@@ -743,6 +743,7 @@ constructor(
         titleText.setTypeface(titleTF)
         artistText.setTypeface(artistTF)
         seamlessText.setTypeface(menuTF)
+        seamlessFormat.setTypeface(menuTF)
     }
 
     /**

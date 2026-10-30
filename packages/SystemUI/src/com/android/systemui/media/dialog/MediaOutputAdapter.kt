@@ -230,7 +230,10 @@ class MediaOutputAdapter(controller: MediaSwitchingController) :
             updateDeviceStatusIcon(deviceStatusIcon, colorTheme)
             updateContentBackground(fixedVolumeConnected, colorTheme)
             updateContentClickListener(clickListener)
-            updateContentStateDescription(connectionState)
+            updateContentStateDescription(
+                connectionState,
+                mController.canShowAudioOutputSettings(device),
+            )
         }
 
         override fun renderDeviceGroupItem() {
@@ -598,12 +601,22 @@ class MediaOutputAdapter(controller: MediaSwitchingController) :
             }
         }
 
-        private fun updateContentStateDescription(connectionState: ConnectionState) {
+        private fun updateContentStateDescription(
+            connectionState: ConnectionState,
+            hasStreamDetails: Boolean = false,
+        ) {
             mMainContent.stateDescription =
                 when (connectionState) {
                     CONNECTED -> mContext.getString(R.string.media_output_item_connected_state)
                     else -> null
                 }
+            if (connectionState == CONNECTED && hasStreamDetails && mMainContent.isClickable) {
+                mMainContent.stateDescription =
+                    mContext.getString(
+                        R.string.audio_stream_connected_details_action,
+                        mMainContent.stateDescription,
+                    )
+            }
         }
 
         override fun disableSeekBar() {

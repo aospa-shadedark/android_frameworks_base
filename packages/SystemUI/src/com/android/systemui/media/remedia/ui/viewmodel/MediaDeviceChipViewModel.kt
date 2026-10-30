@@ -26,4 +26,6 @@ data class MediaDeviceChipViewModel(
     val onClick: (Expandable) -> Unit,
     /** Fallback for chip's content description if [text] is null */
     val defaultDescription: String,
+    /** Keep the reported format separate from the device name. */
+    val audioFormatLabel: String? = null,
 )
