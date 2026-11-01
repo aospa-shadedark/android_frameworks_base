@@ -37,6 +37,8 @@ public final class GameDeviceIdentitySpoof {
             final String identities = Settings.System.getStringForUser(
                     context.getContentResolver(), SETTING_GAME_IDENTITIES, userId);
             if (identities == null || identities.isEmpty()) return;
+            // Runs for every app, so skip the JSON parse unless the package has a profile.
+            if (!identities.contains("\"" + packageName + "\"")) return;
 
             final JSONObject profiles = new JSONObject(identities);
             final JSONObject customProfile = profiles.optJSONObject(packageName);

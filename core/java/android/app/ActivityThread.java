@@ -8070,10 +8070,8 @@ public final class ActivityThread extends ClientTransactionHandler
                                                 UserHandle.myUserId());
         VMRuntime.setProcessPackageName(data.appInfo.packageName);
         // Apply a selected game device profile before application code and providers run.
-        if (data.appInfo.category == ApplicationInfo.CATEGORY_GAME) {
-            GameDeviceIdentitySpoof.apply(getSystemContext(), data.appInfo.packageName,
-                    UserHandle.myUserId());
-        }
+        GameDeviceIdentitySpoof.apply(getSystemContext(), data.appInfo.packageName,
+                UserHandle.myUserId());
         mDdmSyncStageUpdater.next(Stage.Named);
 
         // Pass data directory path to ART. This is used for caching information and
