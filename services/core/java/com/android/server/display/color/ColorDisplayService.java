@@ -1783,7 +1783,9 @@ public final class ColorDisplayService extends SystemService {
                 updateDisplayWhiteBalanceStatus();
             }
 
-            mHandler.sendEmptyMessage(MSG_APPLY_NIGHT_DISPLAY_ANIMATED);
+            mHandler.sendEmptyMessage(mBootCompleted
+                    ? MSG_APPLY_NIGHT_DISPLAY_ANIMATED
+                    : MSG_APPLY_NIGHT_DISPLAY_IMMEDIATE);
         }
 
         int getColorTemperature() {
