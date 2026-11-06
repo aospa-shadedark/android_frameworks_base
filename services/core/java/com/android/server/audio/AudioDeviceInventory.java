@@ -629,6 +629,9 @@ public class AudioDeviceInventory {
     private final ArrayList<String> mApmConnectedDevices = new ArrayList<String>();
 
     @GuardedBy("mDevicesLock")
+    private final ArrayMap<String, Integer> mA2dpConnectionRetries = new ArrayMap<>();
+
+    @GuardedBy("mDevicesLock")
     // List of preferred devices for strategies
     private final ArrayMap<Integer, List<AudioDeviceAttributes>> mPreferredDevices =
             new ArrayMap<>();
@@ -1165,8 +1168,16 @@ public class AudioDeviceInventory {
             if (di == null) {
 // QTI_END: 2022-10-07: Bluetooth: Merge "base: Reduce A2SP SHO time" into t-keystone-qcom-dev
 // QTI_BEGIN: 2024-05-11: Audio: base: Remove A2DP to A2DP quick SHO changes
-                Log.e(TAG, "invalid null DeviceInfo in onBluetoothDeviceConfigChange");
-                mmi.set(MediaMetrics.Property.EARLY_RETURN, "null DeviceInfo").record();
+                Log.w(TAG, "invalid null DeviceInfo in onBluetoothDeviceConfigChange, recovering: " + address);
+                if (btInfo.mProfile == BluetoothProfile.A2DP) {
+                    if (btInfo.mVolume != -1) {
+                        mDeviceBroker.postSetVolumeIndexOnDevice(AudioSystem.STREAM_DEFAULT,
+                                btInfo.mVolume * 10, btInfo.mAudioSystemDevice,
+                                "onBluetoothDeviceConfigChange_fallback");
+                    }
+                    makeA2dpDeviceAvailable(btInfo, codec, "onBluetoothDeviceConfigChange_fallback");
+                }
+                mmi.set(MediaMetrics.Property.EARLY_RETURN, "null DeviceInfo fallback").record();
                 return delayMs;
             }
 
@@ -2414,8 +2425,18 @@ public class AudioDeviceInventory {
                     "APM failed to make available A2DP device addr="
                             + Utils.anonymizeBluetoothAddress(address)
                             + " error=" + res).printSlog(EventLogger.Event.ALOGE, TAG));
+            int retries = mA2dpConnectionRetries.getOrDefault(address, 0);
+            if (retries < 2) {
+                mA2dpConnectionRetries.put(address, retries + 1);
+                Log.i(TAG, "Retrying A2DP connection for " + Utils.anonymizeBluetoothAddress(address)
+                        + " in " + BT_CONFIG_CHANGE_MUTE_DELAY_MS + "ms (retry " + (retries + 1) + "/2)");
+                mDeviceBroker.postBluetoothActiveDevice(btInfo, BT_CONFIG_CHANGE_MUTE_DELAY_MS);
+            } else {
+                mA2dpConnectionRetries.remove(address);
+            }
             return;
         } else {
+            mA2dpConnectionRetries.remove(address);
             final DeviceInfo di = new DeviceInfo(AudioSystem.DEVICE_OUT_BLUETOOTH_A2DP, name,
                     address, btInfo.mDevice.getIdentityAddress(), codec);
             String message = "A2DP sink device addr=" + Utils.anonymizeBluetoothAddress(address);
@@ -2651,6 +2672,7 @@ public class AudioDeviceInventory {
         mDeviceBroker.clearAvrcpAbsoluteVolumeSupported(ada);
         final int res = mAudioSystem.setDeviceConnectionState(ada,
                 AudioSystem.DEVICE_STATE_UNAVAILABLE, codec, deviceSwitch);
+        mA2dpConnectionRetries.remove(address);
         // always remove even if disconnection failed
         removeTrackedConnectedDevice(deviceToRemoveKey, /*disconnectedFromApm*/ true);
 
