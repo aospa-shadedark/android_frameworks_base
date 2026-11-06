@@ -1548,7 +1548,9 @@ public class ComputerEngine implements Computer {
                     : mPermissionManager.getGidsForUid(UserHandle.getUid(userId, ps.getAppId()));
             // Allow microG GmsCore and FakeStore to spoof signature
             final boolean isMicroG = ArrayUtils.contains(MICROG_FAKE_SIGNATURE_PACKAGES,
-                    p.getPackageName());
+                    p.getPackageName())
+                    && !ArrayUtils.isEmpty(p.getRequestedPermissions())
+                    && p.getRequestedPermissions().contains("android.permission.FAKE_PACKAGE_SIGNATURE");
             // Compute installed permissions only if requested
             final Set<String> installedPermissions = ((flags & PackageManager.GET_PERMISSIONS) == 0
                     || ArrayUtils.isEmpty(p.getPermissions())) ? Collections.emptySet()
