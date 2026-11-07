@@ -47,6 +47,7 @@
         android:textAlignment="viewStart"
         android:gravity="start | center_vertical"
         android:textAppearance="@style/TextAppearance.PrivacyDialog"
+        android:textColor="?android:attr/textColorPrimary"
         android:lineHeight="20sp"
     />
 
